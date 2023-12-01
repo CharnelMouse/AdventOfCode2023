@@ -1,9 +1,7 @@
-! Copyright (C) 2023 Your name.
-! See https://factorcode.org/license.txt for BSD license.
 USING: tools.test AOC2023 ;
 IN: AOC2023.tests
 
-{ { 12 38 15 77 } }
+{ 142 }
 [
 {
 "1abc2"
@@ -11,11 +9,11 @@ IN: AOC2023.tests
 "a1b2c3d4e5f"
 "treb7uchet"
 }
-to-nums
+run-01-1
 ]
 unit-test
 
-{ { 29 83 13 24 42 14 76 } }
+{ 281 }
 [
 {
 "two1nine"
@@ -26,6 +24,6 @@ unit-test
 "zoneight234"
 "7pqrstsixteen"
 }
-to-nums2
+run-01-2
 ]
 unit-test

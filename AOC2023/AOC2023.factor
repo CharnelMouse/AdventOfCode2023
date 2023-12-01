@@ -1,24 +1,40 @@
-! Copyright (C) 2023 Your name.
-! See https://factorcode.org/license.txt for BSD license.
-USING: io.encodings.utf8 io.files io unicode sequences kernel math.parser strings math prettyprint regexp combinators arrays quotations accessors ranges ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors ;
 IN: AOC2023
 
-: read-01 ( -- seq ) "01.txt" utf8 [ read-lines ] with-file-reader ;
-: digits ( string -- string ) [ digit? ] filter ;
-: ends ( string -- n ) [ first 1string ] [ last 1string ] bi append string>number ;
-: to-num ( string -- n ) digits ends ;
-: to-nums ( seq -- seq ) [ to-num ] map ;
-: run-01-1 ( seq -- n ) to-nums 0 [ + ] reduce ;
+: read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
+
 : digit-names ( -- seq ) { "zero" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" } ;
-: digits-seq ( -- seq ) 0 9 [a..b] ;
-: replace-args ( -- seq ) digit-names [ <regexp> ] map digits-seq [ 2array ] 2map ;
-: replace-quots ( -- seq ) replace-args [ >quotation [ re-replace ] append ] map ;
-: apply-all ( seq string -- string ) [ call( string -- string ) ] reduce ;
-: string-to-num ( string -- n ) { { "zero" [ 0 ] } { "one" [ 1 ] } { "two" [ 2 ] } { "three" [ 3 ] } { "four" [ 4 ] } { "five" [ 5 ] } { "six" [ 6 ] } { "seven" [ 7 ] } { "eight" [ 8 ] } { "nine" [ 9 ] } [ string>number ] } case ;
-: to-regexp ( seq -- regexp ) "\\d" [ "|" swap append append ] reduce <regexp> ;
-: find-first ( string seq -- string ) to-regexp first-match >string ;
-: find-last ( string seq -- string ) [ reverse ] dip [ reverse ] map find-first reverse ;
-: to-num2 ( string -- n ) digit-names [ find-first string-to-num 10 * ] [ find-last string-to-num ] 2bi + ;
-: to-nums2 ( seq -- seq ) [ to-num2 ] map ;
-: run-01-2 ( seq -- n ) to-nums2 0 [ + ] reduce ;
+: digit-strings ( -- seq ) 9 [0..b] [ number>string ] map ;
+
+TUPLE: state text success ;
+C: <state> state
+
+: update-state ( string object ? -- state ) [ nip t ] [ drop f ] if <state> ;
+: check-start ( state sub -- state ) over success>> [ drop ] [ [ text>> ] dip 2dup head? update-state ] if ;
+: check-end ( state sub -- state ) over success>> [ drop ] [ [ text>> ] dip 2dup tail? update-state ] if ;
+: check-matchers ( state seq quotation -- state ) swapd reduce ; inline
+: check-word-starter ( state -- state ) digit-names [ check-start ] check-matchers ;
+: check-word-ender ( state -- state ) digit-names [ check-end ] check-matchers ;
+: check-num-starter ( state -- state ) digit-strings [ check-start ] check-matchers ;
+: check-num-ender ( state -- state ) digit-strings [ check-end ] check-matchers ;
+: check-starter ( state -- state ) check-word-starter check-num-starter ;
+: check-ender ( state -- state ) check-word-ender check-num-ender ;
+
+: not-found? ( state -- ? ) [ text>> empty? ] [ success>> ] bi or not ;
+: find-first-word-loop ( state -- state ) check-starter dup success>> [ ] [ dup text>> rest over text<< ] if ;
+: first-match ( string -- string ) f <state> [ dup not-found? ] [ find-first-word-loop ] while text>> ;
+: find-last-word-loop ( state -- state ) check-ender dup success>> [ ] [ dup text>> but-last over text<< ] if ;
+: last-match ( string -- string ) f <state> [ dup not-found? ] [ find-last-word-loop ] while text>> ;
+
+: name-cases ( -- seq ) digit-names 9 [0..b] [ 1quotation ] map [ 2array ] 2map ;
+: cases ( -- seq ) name-cases { [ string>number ] } append ;
+: resolve ( string -- n ) cases [ case ] call( string seq -- n ) ;
+
+: to-num ( string -- n ) [ digit? ] [ find nip ] [ find-last nip ] 2bi 2array string>number ;
+: to-num2 ( string -- n ) [ first-match resolve 10 * ] [ last-match resolve ] bi + ;
+
+: read-01 ( -- seq ) "01.txt" read-input ;
+: run-01-1 ( seq -- n ) [ to-num ] map-sum ;
+: run-01-2 ( seq -- n ) [ to-num2 ] map-sum ;
+
 : run-01 ( -- ) read-01 [ run-01-1 . ] [ run-01-2 . ] bi ;

@@ -40,20 +40,20 @@ C: <state> state
 : run-01 ( -- ) read-01 [ run-01-1 . ] [ run-01-2 . ] bi ;
 
 
-TUPLE: bag { red  fixnum } { green fixnum } { blue fixnum } ;
-C: <bag> bag
-
-: empty-bag ( -- bag ) 0 0 0 <bag> ;
-: bag-power ( bag -- n ) tuple-slots product ;
-: inc-bag ( bag seq -- bag ) [ first string>number ] [ second ] bi { { "red" [ over red>> max >>red ] } { "green" [ over green>> max >>green ] } { "blue" [ over blue>> max >>blue ] } } case  ;
+: replace-nth ( new n seq -- seq' ) [ dup 1 + ] dip replace-slice ;
+: max-nth ( seq new n -- seq' ) [ 2dup nth ] dip max { 0 } 1sequence -rot replace-nth ;
+: empty-bag ( -- bag ) { 0 0 0 } ;
+: bag-power ( bag -- n ) product ;
+: colour>n ( string -- n ) { { "red" [ 0 ] } { "green" [ 1 ] } { "blue" [ 2 ] } } case ;
+: inc-bag ( bag seq -- bag' ) [ first string>number ] [ second colour>n ] bi -rot max-nth ;
 : to-bag ( string -- bag ) "," split [ rest " " split ] map empty-bag [ inc-bag ] reduce ;
 : to-bags ( string -- seq ) ":;" split rest [ to-bag ] map ;
-: bag-max ( bag bag' -- bag'' ) [ tuple-slots ] bi@ [ max ] 2map bag slots>tuple ;
+: bag-max ( bag bag' -- bag'' ) [ max ] 2map ;
 : min-bag ( string -- bag ) to-bags empty-bag [ bag-max ] reduce ;
-: valid ( string bag -- ? ) [ min-bag ] dip [ tuple-slots ] bi@ [ <= ] 2all? ;
+: valid ( string bag -- ? ) [ min-bag ] dip [ <= ] 2all? ;
 : n-if-valid ( string n bag -- n ) swapd valid [ 1 + ] [ drop 0 ] if ;
 
 : read-02 ( -- seq ) "02.txt" read-input ;
-: run-02-1 ( seq -- n ) [ 12 13 14 <bag> n-if-valid ] map-index 0 [ + ] reduce ;
+: run-02-1 ( seq -- n ) [ { 12 13 14 } n-if-valid ] map-index 0 [ + ] reduce ;
 : run-02-2 ( seq -- f ) [ min-bag bag-power ] map-sum ;
 : run-02 ( -- ) read-02 [ run-02-1 . ] [ run-02-2 . ] bi ;

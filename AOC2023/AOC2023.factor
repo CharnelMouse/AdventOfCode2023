@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order classes.tuple ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -38,3 +38,21 @@ C: <state> state
 : run-01-2 ( seq -- n ) [ to-num2 ] map-sum ;
 
 : run-01 ( -- ) read-01 [ run-01-1 . ] [ run-01-2 . ] bi ;
+
+
+TUPLE: bag { red  fixnum } { green fixnum } { blue fixnum } ;
+C: <bag> bag
+
+: empty-bag ( -- bag ) 0 0 0 <bag> ;
+: inc-bag ( bag seq -- bag ) [ first string>number ] [ second ] bi { { "red" [ over red>> max >>red ] } { "green" [ over green>> max >>green ] } { "blue" [ over blue>> max >>blue ] } } case  ;
+: to-bag ( string -- bag ) "," split [ rest " " split ] map empty-bag [ inc-bag ] reduce ;
+: to-bags ( string -- seq ) ":;" split rest [ to-bag ] map ;
+: bag-max ( bag bag' -- bag'' ) [ tuple-slots ] bi@ [ max ] 2map bag slots>tuple ;
+: min-bag ( string -- bag ) to-bags empty-bag [ bag-max ] reduce ;
+: valid ( string bag -- ? ) [ min-bag ] dip [ tuple-slots ] bi@ [ <= ] 2all? ;
+: n-if-valid ( string n bag -- n ) swapd valid [ 1 + ] [ drop 0 ] if ;
+
+: read-02 ( -- seq ) "02.txt" read-input ;
+: run-02-1 ( seq -- n ) [ 12 13 14 <bag> n-if-valid ] map-index 0 [ + ] reduce ;
+: run-02-2 ( seq -- f ) drop f ;
+: run-02 ( -- ) read-02 run-02-1 . ;

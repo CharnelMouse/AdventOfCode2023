@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order classes.tuple sets ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -68,36 +68,47 @@ C: <pos> pos
 : nonpersymb? ( char -- ? ) [ digit? ] [ period? ] bi or not ;
 : gear? ( char -- ? ) CHAR: * = ;
 
-: split-on-false ( seq n/f -- seq )  dup [ as-seq dupd [ last ] dip append as-seq swap dup [ length 1 - ] dip replace-nth ] [ drop { { } } append ] if ;
+: tst ( seq x -- 1seq ) as-seq [ last ] dip append as-seq ;
+: add-to-last ( seq x -- seq' ) [ tst ] curry [ length 1 - ] [ ] tri replace-nth ;
+: new-subseq ( seq -- seq' ) { { } } append ;
+: split-on-false ( seq n/f -- seq )  dup [ add-to-last ] [ drop new-subseq ] if ;
 : group-nonfalse ( seq -- subseqs ) { { } } [ split-on-false ] reduce harvest ;
 : digit/f ( char n -- char/f ) swap digit? [ ] [ drop f ] if ;
 : digit-slices ( string -- index-slices ) [ digit/f ] { } map-index-as group-nonfalse ;
 
-: true-index ( seq quot: ( x -- ? ) -- seq ) [ dip swap [ ] [ drop f ] if ] curry { 0 } map-index-as ; inline
+: index/f ( x y quot: ( x -- ? ) --  ) dip swap [ ] [ drop f ] if ; inline
+: true-index ( seq quot: ( x -- ? ) -- seq ) [ index/f ] curry { 0 } map-index-as ; inline
 : slice-true ( seq quot: ( x -- ? ) -- seq ) true-index [ number? ] filter ; inline
 
 : nonpersymb-indices ( seq<a> -- seq<a> ) [ nonpersymb? ] slice-true ;
 : gear-indices ( seq -- seq ) [ gear? ] slice-true ;
 : get-pos ( string n quot: ( seq -- seq ) -- seq ) dip [ <pos> ] curry map ; inline
-: get-pos-set ( seq n quot: ( seq -- subseqs ) -- seq ) dip [ <pos> ] curry [ map ] curry map ; inline
-: numblocks-row ( string n -- numblocks ) [ digit-slices ] get-pos-set ;
+: with-y ( n -- pos ) [ <pos> ] curry ; inline
+: get-pos-set ( seq n quot: ( seq -- subseqs ) -- seq ) dip [ with-y map ] curry map ; inline
+: numblocks-row ( string n -- nbs ) [ digit-slices ] get-pos-set ;
 : sym-poss ( string n -- poss ) [ nonpersymb-indices ] get-pos ;
 : gear-poss ( string n -- poss ) [ gear-indices ] get-pos ;
-: numblocks ( strings -- numblocks ) [ numblocks-row ] map-index concat ;
+: numblocks ( strings -- nbs ) [ numblocks-row ] map-index concat ;
 : symbol-positions ( strings -- poss ) [ sym-poss ] map-index concat ;
 : gear-positions ( strings -- poss ) [ gear-poss ] map-index concat ;
 
-: diff1 ( n n -- ? ) - abs 1 <= ;
-: L1-dist1 ( pos pos -- ? ) [ [ x>> ] bi@ diff1 ] [ [ y>> ] bi@ diff1 ] 2bi and ;
-: adjacent? ( numblock pos -- ? ) [ L1-dist1 ] curry any? ;
-: adjacent ( numblocks pos -- numblocks ) [ adjacent? ] curry filter ;
-: adjacent-any? ( numblock poss -- ? ) swap [ swap adjacent? ] curry any? ;
-: adjacent-any ( numblocks poss -- numblocks ) [ adjacent-any? ] curry filter ;
-: adjacent-per-pos ( numblocks poss -- numblocks ) swap [ swap adjacent ] curry map ;
-: num ( numset strings -- int ) over first y>> swap nth [ [ first x>> ] [ last x>> 1 + ] bi ] dip subseq string>number ;
-: numc ( strings -- quot: ( poss -- int ) ) [ num ] curry ; inline
+: bi@diff1 ( quot: ( x -- n ) -- ? ) bi@ - abs 1 <= ; inline
+: L1-dist1 ( pos pos -- ? ) [ [ x>> ] bi@diff1 ] [ [ y>> ] bi@diff1 ] 2bi and ;
+: adjacent? ( nb pos -- ? ) [ L1-dist1 ] curry any? ;
+: adjacent ( nbs pos -- nbs ) [ adjacent? ] curry filter ;
+: adjacent-any? ( nb poss -- ? ) swap [ swap adjacent? ] curry any? ;
+: adjacent-any ( nbs poss -- nbs ) [ adjacent-any? ] curry filter ;
+: adjacent-per-pos ( nbs poss -- nbs ) swap [ swap adjacent ] curry map ;
+: xbounds ( nb -- n n' ) [ first x>> ] [ last x>> 1 + ] bi ;
+: num ( nb strings -- int ) over first y>> swap nth [ xbounds ] dip subseq string>number ;
+: num-lookup ( strings -- quot: ( poss -- int ) ) [ num ] curry ; inline
+
+: valid-nbs ( strings -- nbs ) [ numblocks ] [ symbol-positions ] bi adjacent-any ;
+: gear-nb-sets ( strings -- nb-sets ) [ numblocks ] [ gear-positions ] bi adjacent-per-pos ;
+: gear-nb-pairs ( strings -- nb-pairs ) gear-nb-sets [ length 2 = ] filter ;
+: with-lookup ( strings quot -- object quot' ) [ num-lookup ] bi ; inline
 
 : read-03 ( -- strings ) "03.txt" read-input ;
-: run-03-1 ( strings -- n ) [ [ numblocks ] [ symbol-positions ] bi adjacent-any ] [ ] bi numc map-sum ;
-: run-03-2 ( strings -- n ) [ [ numblocks ] [ gear-positions ] bi adjacent-per-pos [ length 2 = ] filter ] [ ] bi numc [ map ] curry map [ product ] map-sum ;
+: run-03-1 ( strings -- n ) [ valid-nbs ] with-lookup map-sum ;
+: run-03-2 ( strings -- n ) [ gear-nb-pairs ] with-lookup [ map ] curry map [ product ] map-sum ;
 : run-03 ( -- ) read-03 [ run-03-1 . ] [ run-03-2 . ] bi ;

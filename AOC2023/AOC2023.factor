@@ -62,22 +62,27 @@ C: <state> state
 TUPLE: pos { x integer read-only } { y integer read-only } ; 
 C: <pos> pos
 
+: as-seq ( x -- seq ) { } 1sequence ;
+
 : period? ( char -- ? ) CHAR: . = ;
 : nonpersymb? ( char -- ? ) [ digit? ] [ period? ] bi or not ;
+: gear? ( char -- ? ) CHAR: * = ;
 : true-index ( seq quot: ( x -- ? ) -- seq ) [ dip swap [ ] [ drop f ] if ] curry { 0 } map-index-as ; inline
 : slice-true ( seq quot: ( x -- ? ) -- seq ) true-index [ number? ] filter ; inline
-: split-on-false ( seq n/f -- seq )  dup [ { } 1sequence dupd [ last ] dip append { } 1sequence swap dup [ length 1 - ] dip replace-nth ] [ drop { { } } append ] if ;
+: split-on-false ( seq n/f -- seq )  dup [ as-seq dupd [ last ] dip append as-seq swap dup [ length 1 - ] dip replace-nth ] [ drop { { } } append ] if ;
 : group-nonfalse ( seq -- seq<seq> ) { { } } [ split-on-false ] reduce ;
 : digit-slices ( seq<a> -- seq<seq<a>> ) [ swap digit? [ ] [ drop f ] if ] { } map-index-as group-nonfalse ;
 : nonpersymb-indices ( seq<a> -- seq<a> ) [ nonpersymb? ] slice-true ;
+: gear-indices ( seq<a> -- seq<a> ) [ gear? ] slice-true ;
 : get-pos ( row n quot: ( seq -- seq ) -- seq ) dip [ <pos> ] curry map ; inline
 : get-pos-set ( row n quot: ( seq -- seq ) -- seq ) dip [ <pos> ] curry [ map ] curry map ; inline
 : num-pos ( row n -- seq<seq<pos>> ) [ digit-slices ] get-pos-set harvest ;
 : sym-pos ( row n -- seq<pos> ) [ nonpersymb-indices ] get-pos ;
+: gear-pos ( row n -- seq<pos> ) [ gear-indices ] get-pos ;
 : number-position-sets ( seq<string> -- seq<seq<pos>> ) [ num-pos ] map-index concat ;
 : symbol-positions ( seq<string> -- set<pos> ) [ sym-pos ] map-index concat ;
+: gear-positions ( seq<string> -- set<pos> ) [ gear-pos ] map-index concat ;
 
-: replace-row ( rowmatches quot: ( n -- n ) -- rowmatches ) dupd [ row>> ] dip call >>row ; inline
 : pleft ( set<pos> -- set<pos> ) [ [ x>> 1 - ] [ y>> ] bi <pos> ] map ;
 : pright ( set<pos> -- set<pos> ) [ [ x>> 1 + ] [ y>> ] bi <pos> ] map ;
 : pup ( set<pos> -- set<pos> ) [ [ x>> ] [ y>> 1 - ] bi <pos> ] map ;
@@ -88,10 +93,14 @@ C: <pos> pos
 : pbelow ( set<pos> -- set<pos> ) pdown pexpand ;
 : neighbours ( set<pos> -- set<pos> ) [ paside ] [ pabove ] [ pbelow ] tri union union ;
 
-: adjacent-single ( seq<pos> -- quot: ( seq<pos> -- ? ) ) [ intersect empty? not ] curry [ filter ] curry  ; inline
-: adjacent ( seq<seq<pos>> seq<pos> -- seq<seq<pos>> ) adjacent-single call ;
+: adjacent-single ( seq<pos> -- quot: ( seq<seq<pos>> -- seq<seq<pos>> ) ) [ intersect empty? not ] curry [ filter ] curry ; inline
+: adjacent ( seq<seq<pos>> seq<pos> -- seq<seq<pos>> ) adjacent-single call ; 
+: adjacent-indiv ( position-sets gear-positions -- gear-adjacent-sets ) [ as-seq ] map swap [ swap neighbours adjacent ] curry map ;
 : num ( set<pos> seq<string> -- int ) over first y>> swap nth [ [ first x>> ] [ last x>> 1 + ] bi ] dip subseq string>number ;
+: numc ( seq<string> -- quot: ( set<pos> -- int ) ) [ num ] curry ; inline
 
 : read-03 ( -- seq<string> ) "03.txt" read-input ;
-: run-03-1 ( seq<string> -- n ) [ [ number-position-sets ] [ symbol-positions neighbours ] bi adjacent ] [ ] bi [ num ] curry map-sum ;
-: run-03 ( -- ) read-03 run-03-1 . ;
+: run-03-1 ( seq<string> -- n ) [ [ number-position-sets ] [ symbol-positions neighbours ] bi adjacent ] [ ] bi numc map-sum ;
+: run-03-2 ( seq<string> -- n ) [ [ number-position-sets ] [ gear-positions ] bi adjacent-indiv [ length 2 = ] filter ] [ ] bi numc [ map ] 
+ curry map [ product ] map-sum ;
+: run-03 ( -- ) read-03 [ run-03-1 . ] [ run-03-2 . ] bi ;

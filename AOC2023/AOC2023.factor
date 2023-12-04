@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -119,3 +119,16 @@ C: <pos> pos
 : run-03-1 ( strings -- n ) [ valid-nbs ] with-lookup map-sum ;
 : run-03-2 ( strings -- n ) [ gear-nb-pairs ] with-lookup [ map ] curry map [ product ] map-sum ;
 : run-03 ( -- ) read-03 [ run-03-1 . ] [ run-03-2 . ] bi ;
+
+
+! Day 4
+
+: -cardname ( card -- string ) ":" split second ;
+: cardhalves ( string -- pair ) "|" split [ split-words harvest ] map ;
+: cardnmatch ( pair -- n ) [ first ] [ second ] bi intersect length ;
+: cardval ( pair -- n ) cardnmatch dup 0 = [ drop 0 ] [ 1 - 2^ ] if ;
+: card-value ( card -- n ) -cardname cardhalves cardval ;
+
+: read-04 ( -- cards ) "04.txt" read-input ;
+: run-04-1 ( cards -- n ) [ card-value ] map-sum ;
+: run-04 ( -- ) read-04 run-04-1 . ;

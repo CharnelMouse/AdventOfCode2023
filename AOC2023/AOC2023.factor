@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets sequences.extras ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -126,9 +126,17 @@ C: <pos> pos
 : -cardname ( card -- string ) ":" split second ;
 : cardhalves ( string -- pair ) "|" split [ split-words harvest ] map ;
 : cardnmatch ( pair -- n ) [ first ] [ second ] bi intersect length ;
-: cardval ( pair -- n ) cardnmatch dup 0 = [ drop 0 ] [ 1 - 2^ ] if ;
-: card-value ( card -- n ) -cardname cardhalves cardval ;
+: card-matches ( card -- n ) -cardname cardhalves cardnmatch ;
+: matchval ( n -- n ) dup 0 = [ drop 0 ] [ 1 - 2^ ] if ;
+: card-value ( card -- n ) card-matches matchval ;
+
+: ncopies-init ( cards -- state slice ) [ drop 1 ] { 0 } map-as dup ;
+: set-head ( slice n -- rest-slice ) over 0 swap set-nth dup length 0 = [ ] [ rest-slice ] if ;
+: set-slice ( new old -- ) [ set-head ] reduce drop ;
+: bump-head ( slice n len -- ) dup 0 = [ 3drop ] [ swapd head-slice [ swap [ + ] curry map ] keep set-slice ] if ;
+: stepstate ( slice card -- slice ) card-matches [ [ rest-slice dup ] [ first ] [ length 1 - ] tri ] dip min bump-head ;
 
 : read-04 ( -- cards ) "04.txt" read-input ;
 : run-04-1 ( cards -- n ) [ card-value ] map-sum ;
-: run-04 ( -- ) read-04 run-04-1 . ;
+: run-04-2 ( cards -- n ) [ ncopies-init ] keep swap [ stepstate ] reduce drop sum ;
+: run-04 ( -- ) read-04 [ run-04-1 . ] [ run-04-2 . ] bi ;

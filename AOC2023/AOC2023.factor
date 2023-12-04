@@ -3,6 +3,9 @@ IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
 
+
+! Day 1
+
 : digit-names ( -- seq ) { "zero" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" } ;
 : digit-strings ( -- seq ) 9 [0..b] [ number>string ] map ;
 
@@ -40,13 +43,15 @@ C: <state> state
 : run-01 ( -- ) read-01 [ run-01-1 . ] [ run-01-2 . ] bi ;
 
 
+! Day 2
+
 : replace-nth ( new n seq -- seq' ) [ dup 1 + ] dip replace-slice ;
 : max-nth ( seq new n -- seq' ) [ 2dup nth ] dip max { 0 } 1sequence -rot replace-nth ;
 : empty-bag ( -- bag ) { 0 0 0 } ;
 : bag-power ( bag -- n ) product ;
 : colour>n ( string -- n ) { { "red" [ 0 ] } { "green" [ 1 ] } { "blue" [ 2 ] } } case ;
 : inc-bag ( bag seq -- bag' ) [ first string>number ] [ second colour>n ] bi -rot max-nth ;
-: to-bag ( string -- bag ) "," split [ rest " " split ] map empty-bag [ inc-bag ] reduce ;
+: to-bag ( string -- bag ) "," split [ rest split-words ] map empty-bag [ inc-bag ] reduce ;
 : to-bags ( string -- seq ) ":;" split rest [ to-bag ] map ;
 : bag-max ( bag bag' -- bag'' ) [ max ] 2map ;
 : min-bag ( string -- bag ) to-bags empty-bag [ bag-max ] reduce ;
@@ -58,6 +63,8 @@ C: <state> state
 : run-02-2 ( seq -- f ) [ min-bag bag-power ] map-sum ;
 : run-02 ( -- ) read-02 [ run-02-1 . ] [ run-02-2 . ] bi ;
 
+
+! Day 3 ( nb refers to numblock, a continguous digit position set that will make a number )
 
 TUPLE: pos { x integer read-only } { y integer read-only } ; 
 C: <pos> pos

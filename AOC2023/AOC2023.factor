@@ -147,7 +147,7 @@ C: <pos> pos
 
 : cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
 : lengthed-range ( start length -- range ) over + [a..b) ;
-: while-nonempty ( ... seq quot: ( ... seq -- ... seq ) -- ... seq ) [ dup empty? not ] swap while ; inline
+: while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
 : empty-range ( -- range ) T{ range { step 1 } } ;
 : parse-perm ( string -- seq ) split-words [ string>number ] map ;
 : permdiff ( perm -- n ) [ first ] [ second ] bi - ;
@@ -163,26 +163,22 @@ C: <pos> pos
 : dirty? ( x-? -- ? ) second ;
 : clean? ( x-? -- ? ) second not ;
 
-: within-source ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
-: ap-n ( n perm -- n-? ) 2dup within-source [ permdiff + dirty ] [ drop clean ] if ;
+: if-clean ( x-? clean: ( x-? -- x-? ) dirty: ( x-? -- x-? ) -- x-? ) pick clean? -rot if ; inline
 
+: within? ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
 : source-range ( map-range -- source-range ) [ second ] [ third ] bi lengthed-range ;
-
 : cut-last ( ranges -- ranges last-range ) dup length 1 - cut-slice first ;
-: cut-slice-at ( range/slice value -- before after ) over first - 0 max over length min cut-slice ;
+: cut-slice-at ( range/slice value -- before after ) over first [-] index-or-length cut-slice ;
 : split-last ( ranges splitter -- ranges ) [ cut-last ] dip over ?first [ cut-slice-at ] [ 2drop { } { } ] if [ 1array append ] bi@ ;
 : split-by-range ( range splitter-range -- 3ranges ) [ first ] [ last 1 + ] bi 2array swap 1array [ split-last ] reduce ;
-
 : split-by-perm ( range perm -- 3ranges ) source-range split-by-range ;
 : shift-range ( range n -- range ) over empty? [ drop ] [ [ [ first ] dip + ] [ drop length ] 2bi lengthed-range ] if ;
 : inc-range ( range perm -- range ) permdiff shift-range ;
 : inc-middle-range ( 3ranges perm -- 3ranges ) [ [ second ] dip inc-range as-seq 1 ] keepd replace-nth ;
 : c-d-c ( 3array -- 3array ) { f t f } [ 2array ] 2map ;
 : reject-empty ( seq<range-?> -- seq<range-?> ) [ first empty? ] reject ;
-: ap-r ( range perm -- seq<range-?> ) [ split-by-perm ] keep inc-middle-range c-d-c reject-empty ;
 
-: if-clean ( x-? clean: ( x-? -- x-? ) dirty: ( x-? -- x-? ) -- x-? ) pick clean? -rot if ; inline
-
+: ap-n ( n perm -- n-? ) 2dup within? [ permdiff + dirty ] [ drop clean ] if ;
 : apply-perm-n ( n-f perm -- n-? ) [ remove-flag ] dip ap-n ;
 : apply-perm-if-clean-n ( n-? perm -- n-? ) [ apply-perm-n ] curry [ ] if-clean ;
 : bind-range-n ( seq<n-?> perm-string -- seq<n-?> ) parse-perm [ apply-perm-if-clean-n ] curry map ;
@@ -190,6 +186,7 @@ C: <pos> pos
 : next-map-n ( ns maps -- ns rest-maps ) cut-paragraph [ apply-map-n ] dip ;
 : run-05-1 ( strings -- n ) cut-seeds [ next-map-n ] while-nonempty drop infimum ;
 
+: ap-r ( range perm -- seq<range-?> ) [ split-by-perm ] keep inc-middle-range c-d-c reject-empty ;
 : apply-perm-r ( r-f perm -- seq<r-?> ) [ remove-flag ] dip ap-r ;
 : apply-perm-if-clean-r ( r-? perm -- seq<r-?> ) [ apply-perm-r ] curry [ as-seq ] if-clean ;
 : bind-range-r ( seq<r-?> perm-string -- seq<r-?> ) parse-perm [ apply-perm-if-clean-r ] curry map concat ;

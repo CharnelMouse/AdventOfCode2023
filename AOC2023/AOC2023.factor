@@ -103,9 +103,9 @@ C: <pos> pos
 : L1-dist1 ( pos pos -- ? ) [ [ x>> ] bi@diff1 ] [ [ y>> ] bi@diff1 ] 2bi and ;
 : adjacent? ( nb pos -- ? ) [ L1-dist1 ] curry any? ;
 : adjacent ( nbs pos -- nbs ) [ adjacent? ] curry filter ;
-: adjacent-any? ( nb poss -- ? ) swap [ swap adjacent? ] curry any? ;
+: adjacent-any? ( nb poss -- ? ) [ adjacent? ] with any? ;
 : adjacent-any ( nbs poss -- nbs ) [ adjacent-any? ] curry filter ;
-: adjacent-per-pos ( nbs poss -- nbs ) swap [ swap adjacent ] curry map ;
+: adjacent-per-pos ( nbs poss -- nbs ) [ adjacent ] with map ;
 : xbounds ( nb -- n n' ) [ first x>> ] [ last x>> 1 + ] bi ;
 : num ( nb strings -- int ) over first y>> swap nth [ xbounds ] dip subseq string>number ;
 : num-lookup ( strings -- quot: ( poss -- int ) ) [ num ] curry ; inline

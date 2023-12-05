@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets assocs ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets assocs grouping sequences.private ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -143,6 +143,7 @@ C: <pos> pos
 ! Day 5
 
 : read-05 ( -- strings ) "05.txt" read-input ;
+
 : parse-seeds ( string -- seeds ) first split-words rest [ string>number ] map ;
 : take-seeds ( strings -- seeds strings ) { "" } split1 [ parse-seeds ] dip ;
 : within-source ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
@@ -152,4 +153,26 @@ C: <pos> pos
 : apply-map ( n map-strings -- n ) rest swap f <pair> [ bind-range ] reduce first ;
 : next-map ( ns strings -- ns rest-strings ) { "" } split1 [ [ apply-map ] curry map ] dip ;
 : run-05-1 ( strings -- n ) take-seeds [ dup empty? not ] [ next-map ] while drop infimum ;
-: run-05 ( -- ) read-05 run-05-1 . ;
+
+: parse-seed-ranges ( string -- seed-ranges ) parse-seeds 2 group [ [ first ] [ second ] bi over + [a..b) ] map ;
+: take-seed-ranges ( strings -- seed-ranges strings ) { "" } split1 [ parse-seed-ranges ] dip ;
+: all-before? ( range indices -- ? ) [ last ] dip first < ;
+: any-before? ( range indices -- ? ) [ first ] dip first < ;
+: all-after? ( range indices -- ? ) [ first ] dip last > ;
+: any-after? ( range indices -- ? ) [ last ] dip last > ;
+: empty-range ( -- range ) T{ range { step 1 } } ;
+: range-before ( range indices -- range ) 2dup any-before? [ [ drop first ] [ [ last ] dip first 1 - min ] 2bi [a..b] ] [ 2drop empty-range ] if ;
+: range-within ( range indices -- range ) 2dup [ all-before? ] [ all-after? ] 2bi or [ 2drop empty-range ] [ [ [ first ] bi@ max ] [ [ last ] bi@ min ] 2bi [a..b] ] if ;
+: range-after ( range indices -- range ) 2dup any-after? [ [ [ first ] dip last 1 + max ] [ drop last ] 2bi [a..b] ] [ 2drop empty-range ] if ;
+: split-indices-range ( range indices -- piece-ranges ) [ range-before ] [ range-within ] [ range-after ] 2tri { } 3sequence ;
+: split-indices-bound ( seq indices -- pieces ) split-indices-range ;
+: parse-source-range ( map-range -- source-range ) [ second ] [ third ] bi over + [a..b) ;
+: split-range-intersect ( range range-string -- 3ranges ) parse-source-range split-indices-bound ;
+: +range ( range n -- range ) [ [ from>> ] dip + ] [ drop length>> ] 2bi over + [a..b) ;
+: apply-range-ranged ( range-f range-string -- seq<range-t> ) [ first ] dip split-words [ string>number ] map tuck split-range-intersect swap [ first ] [ second ] bi - over second swap +range as-seq swap 1 swap replace-nth { f t f } [ <pair> ] 2map [ first empty? not ] filter ;
+: bind-range-ranged ( seq<range-?> range-string -- seq<range-?> ) dup split-words third "0" = [ drop ] [ [ over second [ drop as-seq ] [ apply-range-ranged ] if ] curry map concat ] if ;
+: apply-map-ranged ( range map-strings -- ranges ) rest swap f <pair> as-seq [ bind-range-ranged ] reduce [ first ] map ;
+: next-map-ranged ( ranges strings -- ranges rest-strings ) { "" } split1 [ [ apply-map-ranged ] curry map concat ] dip ;
+: run-05-2 ( strings -- n ) take-seed-ranges [ dup empty? not ] [ next-map-ranged ] while drop [ first ] map infimum ;
+: run-05-2-debug ( strings -- ) take-seed-ranges over . [ dup empty? not ] [ dup { "" } split1 drop . next-map-ranged "=>" print over . ] while drop [ first ] map dup . infimum . ;
+: run-05 ( -- ) read-05 [ run-05-1 . ] [ run-05-2 . ] bi ;

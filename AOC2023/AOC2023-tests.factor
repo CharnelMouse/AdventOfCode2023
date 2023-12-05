@@ -153,4 +153,6 @@ unit-test
 "60 56 37"
 "56 93 4"
 }
-[ run-05-1 ] curry { 35 } swap unit-test
+[ [ run-05-1 ] curry { 35 } swap unit-test ]
+[ [ run-05-2 ] curry { 46 } swap unit-test ]
+bi

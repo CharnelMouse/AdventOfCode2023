@@ -1,7 +1,11 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets assocs grouping sequences.private ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping ;
 IN: AOC2023
 
+! Common words
+
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
+: as-seq ( x -- seq ) 1array ;
+: replace-nth ( new n seq -- seq' ) [ dup 1 + ] dip replace-slice ;
 
 
 ! Day 1
@@ -45,7 +49,6 @@ C: <state> state
 
 ! Day 2
 
-: replace-nth ( new n seq -- seq' ) [ dup 1 + ] dip replace-slice ;
 : max-nth ( seq new n -- seq' ) [ 2dup nth ] dip max { 0 } 1sequence -rot replace-nth ;
 : empty-bag ( -- bag ) { 0 0 0 } ;
 : bag-power ( bag -- n ) product ;
@@ -69,8 +72,6 @@ C: <state> state
 TUPLE: pos { x integer read-only } { y integer read-only } ; 
 C: <pos> pos
 
-: as-seq ( x -- seq ) { } 1sequence ;
-
 : period? ( char -- ? ) CHAR: . = ;
 : nonpersymb? ( char -- ? ) [ digit? ] [ period? ] bi or not ;
 : gear? ( char -- ? ) CHAR: * = ;
@@ -78,12 +79,12 @@ C: <pos> pos
 : tst ( seq x -- 1seq ) as-seq [ last ] dip append as-seq ;
 : add-to-last ( seq x -- seq' ) [ tst ] curry [ length 1 - ] [ ] tri replace-nth ;
 : new-subseq ( seq -- seq' ) { { } } append ;
-: split-on-false ( seq n/f -- seq )  dup [ add-to-last ] [ drop new-subseq ] if ;
+: split-on-false ( seq n/f -- seq ) dup [ add-to-last ] [ drop new-subseq ] if ;
 : group-nonfalse ( seq -- subseqs ) { { } } [ split-on-false ] reduce harvest ;
 : digit/f ( char n -- char/f ) swap digit? [ ] [ drop f ] if ;
 : digit-slices ( string -- index-slices ) [ digit/f ] { } map-index-as group-nonfalse ;
 
-: index/f ( x y quot: ( x -- ? ) --  ) dip swap [ ] [ drop f ] if ; inline
+: index/f ( x y quot: ( x -- ? ) -- ) dip swap [ ] [ drop f ] if ; inline
 : true-index ( seq quot: ( x -- ? ) -- seq ) [ index/f ] curry { 0 } map-index-as ; inline
 : slice-true ( seq quot: ( x -- ? ) -- seq ) true-index [ number? ] filter ; inline
 
@@ -144,35 +145,58 @@ C: <pos> pos
 
 : read-05 ( -- strings ) "05.txt" read-input ;
 
-: parse-seeds ( string -- seeds ) first split-words rest [ string>number ] map ;
-: take-seeds ( strings -- seeds strings ) { "" } split1 [ parse-seeds ] dip ;
-: within-source ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
-: <pair> ( x y -- seq ) { } 2sequence ;
-: apply-range ( n-f range-string -- n-t ) [ first ] dip split-words [ string>number ] map 2dup within-source [ tuck second - [ first ] dip + t <pair> ] [ drop f <pair> ] if ;
-: bind-range ( n-? range-string -- n-? ) over second [ drop ] [ apply-range ] if ;
-: apply-map ( n map-strings -- n ) rest swap f <pair> [ bind-range ] reduce first ;
-: next-map ( ns strings -- ns rest-strings ) { "" } split1 [ [ apply-map ] curry map ] dip ;
-: run-05-1 ( strings -- n ) take-seeds [ dup empty? not ] [ next-map ] while drop infimum ;
+: cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
+: lengthed-range ( start length -- range ) over + [a..b) ;
+: while-nonempty ( ... seq quot: ( ... seq -- ... seq ) -- ... seq ) [ dup empty? not ] swap while ; inline
+: empty-range ( -- range ) T{ range { step 1 } } ;
+: parse-perm ( string -- seq ) split-words [ string>number ] map ;
+: permdiff ( perm -- n ) [ first ] [ second ] bi - ;
 
-: parse-seed-ranges ( string -- seed-ranges ) parse-seeds 2 group [ [ first ] [ second ] bi over + [a..b) ] map ;
-: take-seed-ranges ( strings -- seed-ranges strings ) { "" } split1 [ parse-seed-ranges ] dip ;
+: parse-seeds ( string -- seeds ) first split-words rest [ string>number ] map ;
+: parse-seed-ranges ( string -- seed-ranges ) parse-seeds 2 group [ [ first ] [ second ] bi lengthed-range ] map ;
+: cut-seeds ( strings -- seeds strings ) cut-paragraph [ parse-seeds ] dip ;
+: cut-seed-ranges ( strings -- seed-ranges strings ) cut-paragraph [ parse-seed-ranges ] dip ;
+
+: clean ( x -- x-f ) f 2array ;
+: dirty ( x -- x-t ) t 2array ;
+: remove-flag ( x-? -- x ) first ;
+: dirty? ( x-? -- ? ) second ;
+: clean? ( x-? -- ? ) second not ;
+
+: within-source ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
+: ap-n ( n perm -- n-? ) 2dup within-source [ permdiff + dirty ] [ drop clean ] if ;
+
+: source-range ( map-range -- source-range ) [ second ] [ third ] bi lengthed-range ;
 : all-before? ( range indices -- ? ) [ last ] dip first < ;
 : any-before? ( range indices -- ? ) [ first ] dip first < ;
 : all-after? ( range indices -- ? ) [ first ] dip last > ;
 : any-after? ( range indices -- ? ) [ last ] dip last > ;
-: empty-range ( -- range ) T{ range { step 1 } } ;
 : range-before ( range indices -- range ) 2dup any-before? [ [ drop first ] [ [ last ] dip first 1 - min ] 2bi [a..b] ] [ 2drop empty-range ] if ;
 : range-within ( range indices -- range ) 2dup [ all-before? ] [ all-after? ] 2bi or [ 2drop empty-range ] [ [ [ first ] bi@ max ] [ [ last ] bi@ min ] 2bi [a..b] ] if ;
 : range-after ( range indices -- range ) 2dup any-after? [ [ [ first ] dip last 1 + max ] [ drop last ] 2bi [a..b] ] [ 2drop empty-range ] if ;
-: split-indices-range ( range indices -- piece-ranges ) [ range-before ] [ range-within ] [ range-after ] 2tri { } 3sequence ;
-: split-indices-bound ( seq indices -- pieces ) split-indices-range ;
-: parse-source-range ( map-range -- source-range ) [ second ] [ third ] bi over + [a..b) ;
-: split-range-intersect ( range range-string -- 3ranges ) parse-source-range split-indices-bound ;
-: +range ( range n -- range ) [ [ from>> ] dip + ] [ drop length>> ] 2bi over + [a..b) ;
-: apply-range-ranged ( range-f range-string -- seq<range-t> ) [ first ] dip split-words [ string>number ] map tuck split-range-intersect swap [ first ] [ second ] bi - over second swap +range as-seq swap 1 swap replace-nth { f t f } [ <pair> ] 2map [ first empty? not ] filter ;
-: bind-range-ranged ( seq<range-?> range-string -- seq<range-?> ) dup split-words third "0" = [ drop ] [ [ over second [ drop as-seq ] [ apply-range-ranged ] if ] curry map concat ] if ;
-: apply-map-ranged ( range map-strings -- ranges ) rest swap f <pair> as-seq [ bind-range-ranged ] reduce [ first ] map ;
-: next-map-ranged ( ranges strings -- ranges rest-strings ) { "" } split1 [ [ apply-map-ranged ] curry map concat ] dip ;
-: run-05-2 ( strings -- n ) take-seed-ranges [ dup empty? not ] [ next-map-ranged ] while drop [ first ] map infimum ;
-: run-05-2-debug ( strings -- ) take-seed-ranges over . [ dup empty? not ] [ dup { "" } split1 drop . next-map-ranged "=>" print over . ] while drop [ first ] map dup . infimum . ;
+: split-by-range ( range splitter-range -- 3ranges ) [ range-before ] [ range-within ] [ range-after ] 2tri 3array ;
+: split-by-perm ( range perm -- 3ranges ) source-range split-by-range ;
+: shift-range ( range n -- range ) [ [ from>> ] dip + ] [ drop length>> ] 2bi lengthed-range ;
+: inc-range ( range perm -- range ) permdiff shift-range ;
+: inc-middle-range ( 3ranges perm -- 3ranges ) [ [ second ] dip inc-range as-seq 1 ] keepd replace-nth ;
+: clean-dirty-clean ( 3array -- 3array ) { f t f } [ 2array ] 2map ;
+: reject-empty ( seq<range-?> -- seq<range-?> ) [ first empty? ] reject ;
+: ap-r ( range perm -- seq<range-?> ) [ split-by-perm ] keep inc-middle-range clean-dirty-clean reject-empty ;
+
+: if-clean ( x-? clean: ( x-? -- x-? ) dirty: ( x-? -- x-? ) -- x-? ) pick clean? -rot if ; inline
+
+: apply-perm-n ( n-f perm -- n-? ) [ remove-flag ] dip ap-n ;
+: apply-perm-if-clean-n ( n-? perm -- n-? ) [ apply-perm-n ] curry [ ] if-clean ;
+: bind-range-n ( seq<n-?> perm-string -- seq<n-?> ) parse-perm [ apply-perm-if-clean-n ] curry map ;
+: apply-map-n ( ns map -- ns ) rest swap [ clean ] map [ bind-range-n ] reduce [ remove-flag ] map ;
+: next-map-n ( ns maps -- ns rest-maps ) cut-paragraph [ apply-map-n ] dip ;
+: run-05-1 ( strings -- n ) cut-seeds [ next-map-n ] while-nonempty drop infimum ;
+
+: apply-perm-r ( range-f perm -- seq<range-?> ) [ remove-flag ] dip ap-r ;
+: apply-perm-if-clean-r ( range-? perm -- seq<range-?> ) [ apply-perm-r ] curry [ as-seq ] if-clean ;
+: bind-range-r ( seq<range-?> perm-string -- seq<range-?> ) parse-perm [ apply-perm-if-clean-r ] curry map concat ;
+: apply-map-r ( ranges map -- ranges ) rest swap [ clean ] map [ bind-range-r ] reduce [ remove-flag ] map ;
+: next-map-r ( ranges maps -- ranges rest-maps ) cut-paragraph [ apply-map-r ] dip ;
+: run-05-2 ( strings -- n ) cut-seed-ranges [ next-map-r ] while-nonempty drop [ first ] map infimum ;
+
 : run-05 ( -- ) read-05 [ run-05-1 . ] [ run-05-2 . ] bi ;

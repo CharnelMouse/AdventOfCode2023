@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets assocs ;
 IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
@@ -139,3 +139,17 @@ C: <pos> pos
 : run-04-1 ( cards -- n ) [ card-value ] map-sum ;
 : run-04-2 ( cards -- n ) [ 1s ] [ [ card-matches ] map ] bi over [ stepstate ] reduce drop sum ;
 : run-04 ( -- ) read-04 [ run-04-1 . ] [ run-04-2 . ] bi ;
+
+! Day 5
+
+: read-05 ( -- strings ) "05.txt" read-input ;
+: parse-seeds ( string -- seeds ) first split-words rest [ string>number ] map ;
+: take-seeds ( strings -- seeds strings ) { "" } split1 [ parse-seeds ] dip ;
+: within-source ( n range-string -- ? ) [ second - ] [ third nip ] 2bi [ drop 0 >= ] [ < ] 2bi and ;
+: <pair> ( x y -- seq ) { } 2sequence ;
+: apply-range ( n-f range-string -- n-t ) [ first ] dip split-words [ string>number ] map 2dup within-source [ tuck second - [ first ] dip + t <pair> ] [ drop f <pair> ] if ;
+: bind-range ( n-? range-string -- n-? ) over second [ drop ] [ apply-range ] if ;
+: apply-map ( n map-strings -- n ) rest swap f <pair> [ bind-range ] reduce first ;
+: next-map ( ns strings -- ns rest-strings ) { "" } split1 [ [ apply-map ] curry map ] dip ;
+: run-05-1 ( strings -- n ) take-seeds [ dup empty? not ] [ next-map ] while drop infimum ;
+: run-05 ( -- ) read-05 run-05-1 . ;

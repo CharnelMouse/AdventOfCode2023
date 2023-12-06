@@ -205,3 +205,8 @@ C: <pos> pos
 : parse-06 ( strings -- times distances ) [ split-words harvest rest [ string>number ] map ] map first2 ;
 : button-times ( time distance -- n ) [ 2 / dup sq ] dip - sqrt [ + 1 - ceiling >fixnum 1 + ] [ - 1 + floor >fixnum ] 2bi [-] ;
 : run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;
+
+: parse-06-single ( strings -- time distance ) [ split-words harvest rest concat string>number ] map first2 ;
+: run-06-2 ( strings -- n ) parse-06-single button-times ;
+
+: run-06 ( -- ) read-06 [ run-06-1 . ] [ run-06-2 . ] bi ;

@@ -110,11 +110,10 @@ int-bitest
 [ run-05-2 ] 46
 int-bitest
 
-[
 {
 "Time:      7  15   30"
 "Distance:  9  40  200"
 }
-run-06-1
-]
-288 int-test
+[ run-06-1 ] 288
+[ run-06-2 ] 71503
+int-bitest

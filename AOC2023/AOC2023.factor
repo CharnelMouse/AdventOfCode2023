@@ -198,15 +198,13 @@ C: <pos> pos
 
 
 ! Day 6
-! Pressing button for time t out of T gives distance d = t(T-t),
-! so time to attain distance d is t = T/2 +- sqrt(T^2/4 - d).
 
 : read-06 ( -- strings ) "06.txt" read-input ;
 : parse-06 ( strings -- times distances ) [ split-words harvest rest [ string>number ] map ] map first2 ;
-: button-times ( time distance -- n ) [ 2 / dup sq ] dip - sqrt [ + 1 - ceiling >fixnum 1 + ] [ - 1 + floor >fixnum ] 2bi [-] ;
-: run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;
-
 : parse-06-single ( strings -- time distance ) [ split-words harvest rest concat string>number ] map first2 ;
+: inv-parts ( time distance -- centre radius ) [ 2 / dup sq ] dip - sqrt ;
+: open-members ( centre radius -- n ) [ + 1 - ceiling >fixnum 1 + ] [ - 1 + floor >fixnum ] 2bi [-] ;
+: button-times ( time distance -- n ) inv-parts open-members ;
+: run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;
 : run-06-2 ( strings -- n ) parse-06-single button-times ;
-
 : run-06 ( -- ) read-06 [ run-06-1 . ] [ run-06-2 . ] bi ;

@@ -5,7 +5,7 @@ IN: AOC2023
 
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
 : as-seq ( x -- seq ) 1array ;
-: replace-nth ( new n seq -- seq' ) [ dup 1 + ] dip replace-slice ;
+: replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
 
 
 ! Day 1
@@ -49,7 +49,7 @@ C: <state> state
 
 ! Day 2
 
-: max-nth ( seq new n -- seq' ) [ 2dup nth ] dip max { 0 } 1sequence -rot replace-nth ;
+: max-nth ( seq new n -- seq' ) [ 2dup nth ] dip max -rot replace-nth ;
 : empty-bag ( -- bag ) { 0 0 0 } ;
 : bag-power ( bag -- n ) product ;
 : colour>n ( string -- n ) { { "red" [ 0 ] } { "green" [ 1 ] } { "blue" [ 2 ] } } case ;
@@ -76,8 +76,8 @@ C: <pos> pos
 : nonpersymb? ( char -- ? ) [ digit? ] [ period? ] bi or not ;
 : gear? ( char -- ? ) CHAR: * = ;
 
-: tst ( seq x -- 1seq ) as-seq [ last ] dip append as-seq ;
-: add-to-last ( seq x -- seq' ) [ tst ] curry [ length 1 - ] [ ] tri replace-nth ;
+: last-append ( seq x -- 1seq ) as-seq [ last ] dip append ;
+: add-to-last ( seq x -- seq' ) [ last-append ] curry [ length 1 - ] [ ] tri replace-nth ;
 : new-subseq ( seq -- seq' ) { { } } append ;
 : split-on-false ( seq n/f -- seq ) dup [ add-to-last ] [ drop new-subseq ] if ;
 : group-nonfalse ( seq -- subseqs ) { { } } [ split-on-false ] reduce harvest ;
@@ -174,7 +174,7 @@ C: <pos> pos
 : split-by-perm ( range perm -- 3ranges ) source-range split-by-range ;
 : shift-range ( range n -- range ) over empty? [ drop ] [ [ [ first ] dip + ] [ drop length ] 2bi lengthed-range ] if ;
 : inc-range ( range perm -- range ) permdiff shift-range ;
-: inc-middle-range ( 3ranges perm -- 3ranges ) [ [ second ] dip inc-range as-seq 1 ] keepd replace-nth ;
+: inc-middle-range ( 3ranges perm -- 3ranges ) [ [ second ] dip inc-range 1 ] keepd replace-nth ;
 : c-d-c ( 3array -- 3array ) { f t f } [ 2array ] 2map ;
 : reject-empty ( seq<range-?> -- seq<range-?> ) [ first empty? ] reject ;
 

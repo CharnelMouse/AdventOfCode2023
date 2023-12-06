@@ -109,3 +109,12 @@ int-bitest
 [ run-05-1 ] 35
 [ run-05-2 ] 46
 int-bitest
+
+[
+{
+"Time:      7  15   30"
+"Distance:  9  40  200"
+}
+run-06-1
+]
+288 int-test

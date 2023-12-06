@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions ;
 IN: AOC2023
 
 ! Common words
@@ -195,3 +195,13 @@ C: <pos> pos
 : run-05-2 ( strings -- n ) cut-seed-ranges [ next-map-r ] while-nonempty drop [ first ] map infimum ;
 
 : run-05 ( -- ) read-05 [ run-05-1 . ] [ run-05-2 . ] bi ;
+
+
+! Day 6
+! Pressing button for time t out of T gives distance d = t(T-t),
+! so time to attain distance d is t = T/2 +- sqrt(T^2/4 - d).
+
+: read-06 ( -- strings ) "06.txt" read-input ;
+: parse-06 ( strings -- times distances ) [ split-words harvest rest [ string>number ] map ] map first2 ;
+: button-times ( time distance -- n ) [ 2 / dup sq ] dip - sqrt [ + 1 - ceiling >fixnum 1 + ] [ - 1 + floor >fixnum ] 2bi [-] ;
+: run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;

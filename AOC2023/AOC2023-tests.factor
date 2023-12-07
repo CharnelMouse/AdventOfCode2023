@@ -118,7 +118,6 @@ int-bitest
 [ run-06-2 ] 71503
 int-bitest
 
-[
 {
 "32T3K 765"
 "T55J5 684"
@@ -126,6 +125,6 @@ int-bitest
 "KTJJT 220"
 "QQQJA 483"
 }
-run-07-1
-]
-6440 int-test
+[ run-07-1 ] 6440
+[ run-07-2 ] 5905
+int-bitest

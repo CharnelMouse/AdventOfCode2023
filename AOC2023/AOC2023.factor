@@ -212,7 +212,6 @@ C: <pos> pos
 
 
 ! Day 7
-! histograms: high 5 pair 4 2pair 3 3kind 3 full 2 4kind 2 5kind 1
 
 : read-07 ( -- strings ) "07.txt" read-input ;
 : parse-07 ( strings -- pairs ) [ split-words first2 [ [ 1string ] { } map-as ] dip string>number 2array ] map ;
@@ -220,9 +219,18 @@ C: <pos> pos
 : hist-type ( hist -- type ) dup >alist length { { 1 [ drop 7 ] } { 4 [ drop 2 ] } { 5 [ drop 1 ] } [ amb-len ] } case ;
 : hand-type ( pair -- type ) first histogram hist-type ;
 : card-rank ( card -- n ) dup digit? [ 1string string>number ] [ { { CHAR: A [ 14 ] } { CHAR: T [ 10 ] } { CHAR: J [ 11 ] } { CHAR: Q [ 12 ] } { CHAR: K [ 13 ] } } case ] if ;
+: sort-vip-rank ( alist -- alist ) [ first first card-rank ] sort-by [ second ] sort-by ;
+: assign-wild-vip ( hist n -- alist ) [ sort-vip-rank dup keys last [ swap at ] 2keep rot ] dip + swap pick set-at ;
+: assign-wild ( hist n -- alist ) [ >alist ] dip over length 0 > [ assign-wild-vip ] [ nip "A" swap 2array 1array ] if ;
+: Js-to-vip ( hist -- alist ) "J" over delete-at* [ assign-wild ] [ drop >alist ] if ;
+: hand-type-Jwild ( pair -- type ) first histogram Js-to-vip hist-type ;
 : hand-ints ( pair -- ns ) first concat [ card-rank ] { } map-as ;
+: hand-ints-Jwild ( pair -- ns ) first [ dup "J" = [ drop "0" ] [ ] if ] map concat [ card-rank ] { } map-as ;
 : sort-in-type ( pairs -- pairs ) [ hand-ints ] sort-by ;
+: sort-in-type-Jwild ( pairs -- pairs ) [ hand-ints-Jwild ] sort-by ;
 : sort-by-hand ( pairs -- pairs ) [ hand-type ] sort-by [ hand-type ] group-by [ second sort-in-type ] map concat ;
+: sort-by-hand-Jwild ( pairs -- pairs ) [ hand-type-Jwild ] sort-by [ hand-type-Jwild ] group-by [ second sort-in-type-Jwild ] map concat ;
 : pair-value ( pair n -- n ) [ second ] dip 1 + * ;
 : run-07-1 ( strings -- n ) parse-07 sort-by-hand [ pair-value ] map-index sum ;
-: run-07 ( -- ) read-07 run-07-1 . ;
+: run-07-2 ( strings -- n ) parse-07 sort-by-hand-Jwild [ pair-value ] map-index sum ;
+: run-07 ( -- ) read-07 [ run-07-1 . ] [ run-07-2 . ] bi ;

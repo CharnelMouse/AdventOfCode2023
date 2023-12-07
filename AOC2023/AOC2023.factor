@@ -1,4 +1,5 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting ;
+FROM: math.statistics => histogram ;
 IN: AOC2023
 
 ! Common words
@@ -208,3 +209,20 @@ C: <pos> pos
 : run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;
 : run-06-2 ( strings -- n ) parse-06-single button-times ;
 : run-06 ( -- ) read-06 [ run-06-1 . ] [ run-06-2 . ] bi ;
+
+
+! Day 7
+! histograms: high 5 pair 4 2pair 3 3kind 3 full 2 4kind 2 5kind 1
+
+: read-07 ( -- strings ) "07.txt" read-input ;
+: parse-07 ( strings -- pairs ) [ split-words first2 [ [ 1string ] { } map-as ] dip string>number 2array ] map ;
+: amb-len ( hist len -- type ) 2 = [ values 4 swap member? 6 5 ? ] [ values 3 swap member? 4 3 ? ] if ;
+: hist-type ( hist -- type ) dup >alist length { { 1 [ drop 7 ] } { 4 [ drop 2 ] } { 5 [ drop 1 ] } [ amb-len ] } case ;
+: hand-type ( pair -- type ) first histogram hist-type ;
+: card-rank ( card -- n ) dup digit? [ 1string string>number ] [ { { CHAR: A [ 14 ] } { CHAR: T [ 10 ] } { CHAR: J [ 11 ] } { CHAR: Q [ 12 ] } { CHAR: K [ 13 ] } } case ] if ;
+: hand-ints ( pair -- ns ) first concat [ card-rank ] { } map-as ;
+: sort-in-type ( pairs -- pairs ) [ hand-ints ] sort-by ;
+: sort-by-hand ( pairs -- pairs ) [ hand-type ] sort-by [ hand-type ] group-by [ second sort-in-type ] map concat ;
+: pair-value ( pair n -- n ) [ second ] dip 1 + * ;
+: run-07-1 ( strings -- n ) parse-07 sort-by-hand [ pair-value ] map-index sum ;
+: run-07 ( -- ) read-07 run-07-1 . ;

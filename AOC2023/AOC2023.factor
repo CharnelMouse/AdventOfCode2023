@@ -7,6 +7,7 @@ IN: AOC2023
 : read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
 : as-seq ( x -- seq ) 1array ;
 : replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
+: split-words-multspace ( seq -- seq ) split-words harvest ;
 
 
 ! Day 1
@@ -126,7 +127,7 @@ C: <pos> pos
 ! Day 4
 
 : -cardname ( card -- string ) ":" split second ;
-: cardhalves ( string -- pair ) "|" split [ split-words harvest ] map ;
+: cardhalves ( string -- pair ) "|" split [ split-words-multspace ] map ;
 : cardnmatch ( pair -- n ) [ first ] [ second ] bi intersect length ;
 : card-matches ( card -- n ) -cardname cardhalves cardnmatch ;
 : matchval ( n -- n ) dup 0 = [ drop 0 ] [ 1 - 2^ ] if ;
@@ -201,8 +202,8 @@ C: <pos> pos
 ! Day 6
 
 : read-06 ( -- strings ) "06.txt" read-input ;
-: parse-06 ( strings -- times distances ) [ split-words harvest rest [ string>number ] map ] map first2 ;
-: parse-06-single ( strings -- time distance ) [ split-words harvest rest concat string>number ] map first2 ;
+: parse-06 ( strings -- times distances ) [ split-words-multspace rest [ string>number ] map ] map first2 ;
+: parse-06-single ( strings -- time distance ) [ split-words-multspace rest concat string>number ] map first2 ;
 : inv-parts ( time distance -- centre radius ) [ 2 / dup sq ] dip - sqrt ;
 : open-members ( centre radius -- n ) [ + 1 - ceiling >fixnum 1 + ] [ - 1 + floor >fixnum ] 2bi [-] ;
 : button-times ( time distance -- n ) inv-parts open-members ;
@@ -230,11 +231,11 @@ C: <pos> pos
 : sort-by-hand ( pairs -- pairs ) [ hand-type ] partition-by [ second sort-in-type ] map concat ;
 
 : best-card ( hist -- card ) >alist dup values supremum [ [ second ] dip = ] curry filter keys [ first card-rank ] supremum-by ;
-: assign-wild-best ( hist n -- alist ) [ dup best-card 2dup swap at ] dip + swap pick set-at ;
+: assign-wild-best ( hist n -- alist ) [ dup best-card 2dup swap at ] dip + set-of ;
 : assign-wild ( hist n -- alist ) [ >alist ] dip over length 0 > [ assign-wild-best ] [ nip "A" swap 2array 1array ] if ;
 : Js-to-best ( hist -- alist ) "J" over delete-at* [ assign-wild ] [ drop >alist ] if ;
 : hand-type-wild ( pair -- type ) first histogram Js-to-best hist-type ;
-: hand-ints-wild ( pair -- ns ) first [ dup "J" = [ drop "0" ] [ ] if ] map ranks ;
+: hand-ints-wild ( pair -- ns ) first [ dup "J" = [ drop "0" ] when ] map ranks ;
 : sort-in-type-wild ( pairs -- pairs ) [ hand-ints-wild ] sort-by ;
 : sort-by-hand-wild ( pairs -- pairs ) [ hand-type-wild ] partition-by [ second sort-in-type-wild ] map concat ;
 

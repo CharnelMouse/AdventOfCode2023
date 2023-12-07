@@ -128,3 +128,14 @@ int-bitest
 [ run-07-1 ] 6440
 [ run-07-2 ] 5905
 int-bitest
+
+[
+{
+"JJJJJ 1"
+"AAAAK 2"
+"TTTTT 3"
+}
+run-07-2
+]
+13
+int-test

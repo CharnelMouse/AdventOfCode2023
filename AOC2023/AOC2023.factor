@@ -224,21 +224,17 @@ C: <pos> pos
 : ranks ( hand -- ns ) concat [ card-rank ] { } map-as ;
 : pair-value ( pair n -- n ) [ second ] dip 1 + * ;
 : partition-by ( seq quot: ( elt -- key ) -- seqs ) [ sort-by ] keep group-by ; inline
-
-: hand-type ( pair -- type ) first histogram hist-type ;
-: hand-ints ( pair -- ns ) first ranks ;
-: sort-in-type ( pairs -- pairs ) [ hand-ints ] sort-by ;
-: sort-by-hand ( pairs -- pairs ) [ hand-type ] partition-by [ second sort-in-type ] map concat ;
+: hand-type ( pair prep: ( hand -- hand ) -- type ) [ first histogram ] dip call hist-type ; inline
+: hand-ranks ( pair prep: ( card -- card ) -- ns ) [ first ] dip map ranks ; inline
+: sort-by-hand ( pairs hand-prep: ( hand-hist -- hand-alist ) card-prep: ( card -- card ) -- pairs ) [ [ hand-type ] curry partition-by ] dip [ [ hand-ranks ] curry [ sort-by ] curry [ second ] swap compose call( pair -- pairs ) ] curry map concat ; inline
 
 : best-card ( hist -- card ) >alist dup values supremum [ [ second ] dip = ] curry filter keys [ first card-rank ] supremum-by ;
-: assign-wild-best ( hist n -- alist ) [ dup best-card 2dup swap at ] dip + set-of ;
-: assign-wild ( hist n -- alist ) [ >alist ] dip over length 0 > [ assign-wild-best ] [ nip "A" swap 2array 1array ] if ;
-: Js-to-best ( hist -- alist ) "J" over delete-at* [ assign-wild ] [ drop >alist ] if ;
-: hand-type-wild ( pair -- type ) first histogram Js-to-best hist-type ;
-: hand-ints-wild ( pair -- ns ) first [ dup "J" = [ drop "0" ] when ] map ranks ;
-: sort-in-type-wild ( pairs -- pairs ) [ hand-ints-wild ] sort-by ;
-: sort-by-hand-wild ( pairs -- pairs ) [ hand-type-wild ] partition-by [ second sort-in-type-wild ] map concat ;
+: add-free ( hist n -- alist ) [ dup best-card 2dup swap at ] dip + set-of ;
+: free-hand ( n -- alist ) "A" swap 2array 1array ;
+: best-hand ( hist n-free -- alist ) [ >alist ] dip over length 0 > [ add-free ] [ nip free-hand ] if ;
+: Js-to-best ( hist -- alist ) "J" over delete-at* [ best-hand ] [ drop ] if ;
+: J-to-0 ( card -- card ) dup "J" = [ drop "0" ] when ;
 
-: run-07-1 ( strings -- n ) parse-07 sort-by-hand [ pair-value ] map-index sum ;
-: run-07-2 ( strings -- n ) parse-07 sort-by-hand-wild [ pair-value ] map-index sum ;
+: run-07-1 ( strings -- n ) parse-07 [ ] [ ] sort-by-hand [ pair-value ] map-index sum ;
+: run-07-2 ( strings -- n ) parse-07 [ Js-to-best ] [ J-to-0 ] sort-by-hand [ pair-value ] map-index sum ;
 : run-07 ( -- ) read-07 [ run-07-1 . ] [ run-07-2 . ] bi ;

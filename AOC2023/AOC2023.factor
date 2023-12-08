@@ -1,5 +1,6 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities ;
 FROM: math.statistics => histogram ;
+FROM: multiline => /* ;
 IN: AOC2023
 
 ! Common words
@@ -242,10 +243,86 @@ C: <pos> pos
 
 ! Day 8
 
+/*
+Modular arithmetic:
+x = a mod b, x = c mod d => x = a + br = c + ds for some r,s >= 0.
+If ub + vd = 1, then x = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd, so z = vda + ubc mod bd.
+If ub + vd = z, where z = gcd(b,d), then zx = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd,
+so x = ( vda + ubc )/z mod lcm(b,d).
+*/
+
+/*
+The documentation for gcd is wrong: a is actually the required multiplier for ax = d mod y, not ay = d mod x.
+Example code to show this:
+USE: backtrack
+: check-gcd ( x y -- ? ) 2dup gcd [ * ] dip - swap mod 0 = ;
+:: check-gcd-opp-spec ( x y -- ? ) [ swap ] [ gcd ] bi [ * ] dip - swap mod 0 = ;
+[ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd not must-be-true 2array . t ] [ "All good." print ] if-amb drop
+[ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd-opp-spec not must-be-true 2array . t ] [ "All good." print ] if-amb drop
+*/
+
+:: mults ( gcd mult1 x y -- mult2 ) gcd x mult1 * - y / ;
+:: crt-mod ( mod1 xs1 mod2 xs2 -- newmod xs )
+  mod1 mod2 gcd :> ( mult1 d )
+  d mult1 mod1 mod2 mults :> mult2
+  mod1 mod2 * d / :> newmod
+  xs1 xs2 [ 2array ] cartesian-map concat [ first2 [ d rem ] bi@ = ] filter :> xpairs
+  xpairs [ first2 [ mod2 * mult2 * ] dip mod1 * mult1 * + d / newmod rem ] map unique keys :> xs
+  newmod xs ;
+: combine-congruences ( cong1 cong2 -- new-cong ) [ first2 ] bi@ crt-mod 2array ;
+
 : read-08 ( -- strings ) "08.txt" read-input ;
 : dir-to-index ( char -- n ) CHAR: L = 0 1 ? ;
-: parse-map ( strings -- map ) [ [ "(,)" member? ] reject split-words first4 [ drop ] 2dip 2array 2array ] map >hashtable ;
-: parse-08 ( strings -- directions map ) cut-paragraph [ first [ dir-to-index ] { 0 } map-as ] dip parse-map ;
-: next-turn ( turns map loc steps -- turns map loc steps ) [ { 1 } split-indices first2 over append swap first ] 3dip [ over at swapd nth ] dip 1 + ;
-: run-08-1 ( strings -- n ) parse-08 "AAA" 0 [ over "ZZZ" = ] [ next-turn ] until [ 3drop ] dip ;
-: run-08 ( -- ) read-08 run-08-1 . ;
+: parse-network ( strings -- network ) [ [ "(,)" member? ] reject split-words first4 [ drop ] 2dip 2array 2array ] map >hashtable ;
+: parse-08 ( strings -- directions network ) cut-paragraph [ first [ dir-to-index ] { 0 } map-as ] dip parse-network ;
+
+! Assuming no finish before all in cycle
+
+: <path-buckets> ( n -- seq ) { } <repetition> >array ;
+:: suffix-nth ( el seq index -- seq' ) index seq tuck nth el suffix index seq set-nth ;
+:: move-08 ( path network directions index -- path' network directions index' n/? )
+  index path nth last :> old-loc
+  index 1 + directions length mod :> new-index
+  index directions nth :> direction
+  direction old-loc network at nth :> new-loc
+  new-loc new-index path nth last-index :> prev-match
+  prev-match
+    [ path network directions index prev-match ]
+    [ new-loc path new-index suffix-nth network directions new-index f ]
+  if ;
+: same-last ( cycle -- 1indexes ) [ [ 2array ] { } map-index-as ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
+: possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
+: shorten-cycle ( cycle -- cycle ) possible-groups [ dup first [ = ] curry all? ] filter first first >array ;
+:: clean-path ( path ndir end-index start-loop -- clean-path )
+  end-index path nth length :> end-loop
+  start-loop ndir * end-index 1 + ndir rem + :> cycle-start
+  end-loop ndir * end-index + :> cycle-end
+  path [ end-loop f pad-tail [ 1array ] map ] map unclip [ [ append ] 2map ] reduce concat [ ] filter :> path-arr
+  path-arr cycle-start head :> path-leadin
+  path-arr cycle-start tail :> path-cycle
+  path-leadin path-cycle shorten-cycle 2array ;
+: move-until-cycle ( path network directions -- clean-path ) 0 f [ dup ] [ drop move-08 ] until [ nip length ] 2dip clean-path ;
+
+: next-turn ( turns -- turns' turn ) { 1 } split-indices first2 over append swap first ;
+: apply-turn ( turn map loc -- map loc' ) over at swapd nth ;
+: next-move ( turns map loc steps -- turns' map loc' steps' ) [ next-turn ] 3dip [ apply-turn ] dip 1 + ;
+: run-08-1 ( strings -- n ) parse-08 "AAA" 0 [ over "ZZZ" = ] [ next-move ] until [ 3drop ] dip ;
+
+: starts ( map -- seq ) keys [ last CHAR: A = ] filter ;
+:: paths ( directions network -- paths ) network starts [ 1array 0 directions length <path-buckets> [ set-nth ] keep ] map ;
+: split-cycle ( n path -- path1 path2 ) tuck second length rem 1array [ second ] dip split-indices first2 ;
+: nrot-seq ( n path -- path' ) tuck split-cycle over append [ [ first ] dip append ] dip 2array ;
+: collapse-to-common-start ( paths -- leadin-time paths' ) [ [ first length ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
+: check-early-end ( paths -- cycles n/? ) [ [ second ] map ] [ [ first ] map ] bi [ [ 2array ] { } map-index-as [ first last CHAR: Z = ] filter [ second ] map ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
+: Z-ends ( cycle -- mod-vals-pair ) [ length ] [ [ 2array ] { } map-index-as [ first last CHAR: Z = ] filter [ second ] map ] bi 2array ;
+! 8 plus solution of
+! 14428 mod 14430, 13200 mod 13202, 22409 mod 22413, 20567 mod 20571, 18726 mod 18728, 18106 mod 18120
+! 14428 mod 14430, 9525428 mod 9525430, {} 711630904530
+: solve-cycles ( cycles -- n ) [ Z-ends ] map unclip [ combine-congruences ] reduce second dup empty? [ ] when infimum ;
+
+: run-08-2 ( strings -- n )
+  parse-08
+  2dup paths
+  -rot swap [ move-until-cycle ] curry curry map
+  collapse-to-common-start check-early-end dup [ nip ] [ drop solve-cycles ] if + ;
+: run-08 ( -- ) read-08 [ run-08-1 . ] [ run-08-2 . ] bi ;

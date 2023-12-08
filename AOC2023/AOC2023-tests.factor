@@ -140,7 +140,6 @@ run-07-2
 13
 int-test
 
-[
 {
 "RL"
 ""
@@ -152,12 +151,10 @@ int-test
 "GGG = (GGG, GGG)"
 "ZZZ = (ZZZ, ZZZ)"
 }
-run-08-1
-]
-2
-int-test
+[ run-08-1 ] 2
+[ run-08-2 ] 2
+int-bitest
 
-[
 {
 "LLR"
 ""
@@ -165,7 +162,24 @@ int-test
 "BBB = (AAA, ZZZ)"
 "ZZZ = (ZZZ, ZZZ)"
 }
-run-08-1
+[ run-08-1 ] 6
+[ run-08-2 ] 6
+int-bitest
+
+[
+{
+"LR"
+""
+"11A = (11B, XXX)"
+"11B = (XXX, 11Z)"
+"11Z = (11B, XXX)"
+"22A = (22B, XXX)"
+"22B = (22C, 22C)"
+"22C = (22Z, 22Z)"
+"22Z = (22B, 22B)"
+"XXX = (XXX, XXX)"
+}
+run-08-2
 ]
 6
 int-test

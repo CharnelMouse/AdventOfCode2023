@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables ;
 FROM: math.statistics => histogram ;
 IN: AOC2023
 
@@ -8,6 +8,7 @@ IN: AOC2023
 : as-seq ( x -- seq ) 1array ;
 : replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
 : split-words-multspace ( seq -- seq ) split-words harvest ;
+: cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
 
 
 ! Day 1
@@ -147,7 +148,6 @@ C: <pos> pos
 
 : read-05 ( -- strings ) "05.txt" read-input ;
 
-: cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
 : lengthed-range ( start length -- range ) over + [a..b) ;
 : while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
 : empty-range ( -- range ) T{ range { step 1 } } ;
@@ -238,3 +238,14 @@ C: <pos> pos
 : run-07-1 ( strings -- n ) parse-07 [ ] [ ] sort-by-hand [ pair-value ] map-index sum ;
 : run-07-2 ( strings -- n ) parse-07 [ Js-to-best ] [ J-to-0 ] sort-by-hand [ pair-value ] map-index sum ;
 : run-07 ( -- ) read-07 [ run-07-1 . ] [ run-07-2 . ] bi ;
+
+
+! Day 8
+
+: read-08 ( -- strings ) "08.txt" read-input ;
+: dir-to-index ( char -- n ) CHAR: L = 0 1 ? ;
+: parse-map ( strings -- map ) [ [ "(,)" member? ] reject split-words first4 [ drop ] 2dip 2array 2array ] map >hashtable ;
+: parse-08 ( strings -- directions map ) cut-paragraph [ first [ dir-to-index ] { 0 } map-as ] dip parse-map ;
+: next-turn ( turns map loc steps -- turns map loc steps ) [ { 1 } split-indices first2 over append swap first ] 3dip [ over at swapd nth ] dip 1 + ;
+: run-08-1 ( strings -- n ) parse-08 "AAA" 0 [ over "ZZZ" = ] [ next-turn ] until [ 3drop ] dip ;
+: run-08 ( -- ) read-08 run-08-1 . ;

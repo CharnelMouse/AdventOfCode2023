@@ -278,6 +278,11 @@ USE: backtrack
 
 ! Assuming no finish before all in cycle
 
+: next-turn ( turns -- turns' turn ) { 1 } split-indices first2 over append swap first ;
+: apply-turn ( turn map loc -- map loc' ) over at swapd nth ;
+: next-move ( turns map loc steps -- turns' map loc' steps' ) [ next-turn ] 3dip [ apply-turn ] dip 1 + ;
+: run-08-1 ( strings -- n ) parse-08 "AAA" 0 [ over "ZZZ" = ] [ next-move ] until [ 3drop ] dip ;
+
 : <path-buckets> ( n -- seq ) { } <repetition> >array ;
 :: suffix-nth ( el seq index -- seq' ) index seq tuck nth el suffix index seq set-nth ;
 :: move-08 ( path network directions index -- path' network directions index' n/? )
@@ -290,35 +295,27 @@ USE: backtrack
     [ path network directions index prev-match ]
     [ new-loc path new-index suffix-nth network directions new-index f ]
   if ;
+: cycle-start ( start-loop ndir end-index -- n ) 1 + over rem [ * ] dip + ;
+: leadin-time ( path -- n ) first length ;
+: path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1array ] map ] curry map unclip [ [ append ] 2map ] reduce concat [ ] filter ;
 : same-last ( cycle -- 1indexes ) [ [ 2array ] { } map-index-as ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
 : possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
 : shorten-cycle ( cycle -- cycle ) possible-groups [ dup first [ = ] curry all? ] filter first first >array ;
-:: clean-path ( path ndir end-index start-loop -- clean-path )
-  end-index path nth length :> end-loop
-  start-loop ndir * end-index 1 + ndir rem + :> cycle-start
-  end-loop ndir * end-index + :> cycle-end
-  path [ end-loop f pad-tail [ 1array ] map ] map unclip [ [ append ] 2map ] reduce concat [ ] filter :> path-arr
-  path-arr cycle-start head :> path-leadin
-  path-arr cycle-start tail :> path-cycle
-  path-leadin path-cycle shorten-cycle 2array ;
-: move-until-cycle ( path network directions -- clean-path ) 0 f [ dup ] [ drop move-08 ] until [ nip length ] 2dip clean-path ;
+: clean-path ( path start-loop ndir end-index -- clean-path ) [ path-arr ] 3dip cycle-start [ head ] [ tail shorten-cycle ] 2bi 2array ;
+: move-until-cycle ( path network directions -- clean-path ) 0 f [ dup ] [ drop move-08 ] until [ nip length ] 2dip -rot clean-path ;
 
-: next-turn ( turns -- turns' turn ) { 1 } split-indices first2 over append swap first ;
-: apply-turn ( turn map loc -- map loc' ) over at swapd nth ;
-: next-move ( turns map loc steps -- turns' map loc' steps' ) [ next-turn ] 3dip [ apply-turn ] dip 1 + ;
-: run-08-1 ( strings -- n ) parse-08 "AAA" 0 [ over "ZZZ" = ] [ next-move ] until [ 3drop ] dip ;
-
-: starts ( map -- seq ) keys [ last CHAR: A = ] filter ;
+: ends-with? ( seq x -- ? ) [ last ] dip = ;
+: starts ( map -- seq ) keys [ CHAR: A ends-with? ] filter ;
 :: paths ( directions network -- paths ) network starts [ 1array 0 directions length <path-buckets> [ set-nth ] keep ] map ;
 : split-cycle ( n path -- path1 path2 ) tuck second length rem 1array [ second ] dip split-indices first2 ;
 : nrot-seq ( n path -- path' ) tuck split-cycle over append [ [ first ] dip append ] dip 2array ;
-: collapse-to-common-start ( paths -- leadin-time paths' ) [ [ first length ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
-: check-early-end ( paths -- cycles n/? ) [ [ second ] map ] [ [ first ] map ] bi [ [ 2array ] { } map-index-as [ first last CHAR: Z = ] filter [ second ] map ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
-: Z-ends ( cycle -- mod-vals-pair ) [ length ] [ [ 2array ] { } map-index-as [ first last CHAR: Z = ] filter [ second ] map ] bi 2array ;
-! 8 plus solution of
-! 14428 mod 14430, 13200 mod 13202, 22409 mod 22413, 20567 mod 20571, 18726 mod 18728, 18106 mod 18120
-! 14428 mod 14430, 9525428 mod 9525430, {} 711630904530
-: solve-cycles ( cycles -- n ) [ Z-ends ] map unclip [ combine-congruences ] reduce second dup empty? [ ] when infimum ;
+: collapse-to-common-start ( paths -- leadin-time paths' ) [ [ leadin-time ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
+: indices-where ( seq quot: ( el -- ? ) -- ns ) [ [ 2array ] { } map-index-as ] dip [ first ] prepose filter [ second ] map ; inline
+: end-loc? ( string -- ? ) CHAR: Z ends-with? ;
+: end-indices ( seq -- ns ) [ end-loc? ] indices-where ;
+: check-early-end ( paths -- cycles n/? ) [ [ second ] map ] [ [ first ] map ] bi [ end-indices ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
+: end-cong ( cycle -- mod-vals-pair ) [ length ] [ end-indices ] bi 2array ;
+: solve-cycles ( cycles -- n ) [ end-cong ] map unclip [ combine-congruences ] reduce second dup empty? [ ] when infimum ;
 
 : run-08-2 ( strings -- n )
   parse-08

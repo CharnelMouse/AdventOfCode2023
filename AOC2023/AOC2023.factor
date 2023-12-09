@@ -330,4 +330,7 @@ USE: backtrack
 : read-09 ( -- seqs ) "09.txt" read-input [ split-words [ string>number ] map ] map ;
 : all-equal? ( seq -- ? ) [ first ] keep swap [ = ] curry all? ;
 : next-num ( seq -- n ) dup all-equal? [ first ] [ [ last ] [ 2 <clumps> [ first2 swap - ] map next-num ] bi + ] if ; recursive
+: prev-num ( seq -- n ) dup all-equal? [ first ] [ [ first ] [ 2 <clumps> [ first2 swap - ] map prev-num ] bi - ] if ; recursive
 : run-09-1 ( seqs -- n ) [ next-num ] map-sum ;
+: run-09-2 ( seqs -- n ) [ prev-num ] map-sum ;
+: run-09 ( -- ) read-09 [ run-09-1 . ] [ run-09-2 . ] bi ;

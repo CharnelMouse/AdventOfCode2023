@@ -323,3 +323,11 @@ USE: backtrack
   -rot swap [ move-until-cycle ] curry curry map
   collapse-to-common-start check-early-end dup [ nip ] [ drop solve-cycles ] if + ;
 : run-08 ( -- ) read-08 [ run-08-1 . ] [ run-08-2 . ] bi ;
+
+
+! Day 9
+
+: read-09 ( -- seqs ) "09.txt" read-input [ split-words [ string>number ] map ] map ;
+: all-equal? ( seq -- ? ) [ first ] keep swap [ = ] curry all? ;
+: next-num ( seq -- n ) dup all-equal? [ first ] [ [ last ] [ 2 <clumps> [ first2 swap - ] map next-num ] bi + ] if ; recursive
+: run-09-1 ( seqs -- n ) [ next-num ] map-sum ;

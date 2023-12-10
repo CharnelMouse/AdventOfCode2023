@@ -408,17 +408,19 @@ USE: backtrack
   } case ;
  : get-start-pipe ( loop -- char ) [ [ second ] [ first ] bi v- ] [ [ last ] [ first ] bi v- ] bi dirs-to-pipe ;
 : fix-start-pipe ( loop map -- map' ) [ [ get-start-pipe ] [ first ] bi ] dip ?set-at ;
-: comb-hc ( hc1 hc2 -- newhc ) 2dup [ odd? ] both? [ - ] [ + ]  if ;
+: row-partial-at ( row hash -- hash' ) >alist [ first second = ] with filter [ [ first first ] [ second ] bi 2array ] map >hashtable ;
+: comb-hc ( hc1 hc2 -- newhc ) 2dup [ odd? ] both? [ - ] [ + ] if ;
+: nonloop-weights ( cols pipe-cols -- seq ) [ member? 0 1 ? ] curry map ;
+: halfturns ( col pipe-cols row-pipe-map -- ht ) [ dupd member? ] dip [ at char-halfval ] curry [ drop 0 ] if ;
+: accumulate-halfturns ( hts -- turn-weights ) 0 [ comb-hc ] accumulate* [ 2 / floor 2 rem ] map ;
 :: count-internal ( row-cols pipe-map -- n )
   row-cols first :> row
-  row-cols second :> cols
-  cols [ first ] [ last ] bi [a..b] :> row-indices
-  row row-indices pipe-map get-row-vals :> row-vals
-  row-indices cols [ member? 0 1 ? ] curry map :> pipe-weights
-  row-indices cols [ dupd member? [ row 2array pipe-map at char-halfval ] [ drop 0 ] if ] curry map :> turn-halfcounts
-  turn-halfcounts 0 [ comb-hc ] accumulate* [ 2 / floor 2 rem ] map :> turn-weights
-  pipe-weights turn-weights [ * ] 2map :> weights
-  weights sum ;
+  row-cols second :> pipe-cols
+  row pipe-map row-partial-at :> row-pipe-map
+  pipe-cols [ first ] [ last ] bi [a..b] :> cols
+  cols pipe-cols nonloop-weights
+  cols pipe-cols row-pipe-map [ halfturns ] 2curry map accumulate-halfturns
+  [ * ] 2map sum ;
 : prepare-10 ( strings -- loop map ) parse-10 [ find-loop ] keep dupd fix-start-pipe ;
 : run-10-1 ( loop map -- n ) drop length 2 / ;
 : run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] keep [ count-internal ] curry map sum ;

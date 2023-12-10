@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
 IN: AOC2023
@@ -300,7 +300,7 @@ USE: backtrack
   if ;
 : cycle-start ( start-loop ndir end-index -- n ) 1 + over rem [ * ] dip + ;
 : leadin-time ( path -- n ) first length ;
-: path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1array ] map ] curry map unclip [ [ append ] 2map ] reduce concat sift ;
+: path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1vector ] map ] curry map unclip [ [ append! ] 2map ] reduce concat sift ;
 : with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
 : same-last ( cycle -- 1indexes ) [ with-indices ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
 : possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
@@ -375,7 +375,7 @@ USE: backtrack
 : next-dir-in-loop ( dir-pos-val -- dir' ) first3 nip facings swap [ opposing? ] curry reject first ;
 : next-in-loop ( hist dir-pos-val map -- hist' dir'-pos'-val'/f map )
   [ [ second ] keep ] dip ! ( hist pos dir-pos-val map )
-  [ [ 2dup swap member? [ drop f ] [ suffix t ] if ] keep ] 2dip ! ( hist' ? pos dir-pos-val map )
+  [ [ 2dup swap first = [ drop f ] [ suffix! t ] if ] keep ] 2dip ! ( hist' ? pos dir-pos-val map )
   [ rot ] dip swap ! ( hist' pos dir-pos-val map ? )
     [
       [ next-dir-in-loop ] dip ! ( hist pos dir' map )
@@ -385,7 +385,7 @@ USE: backtrack
     ]
     [ [ 2drop f ] dip ] ! ( hist' f map )
   if ;
-: find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1array ] 2dip [ over ] [ next-in-loop ] while 2drop ;
+: find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1vector ] 2dip [ over ] [ next-in-loop ] while 2drop ;
 : find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
 : loop-bounds ( loop -- corners ) [ unclip [ pmin ] reduce ] [ unclip [ pmax ] reduce ] bi 2array ;
 : partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second firsts sort ] bi 2array ] map ;

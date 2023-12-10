@@ -340,6 +340,9 @@ USE: backtrack
 
 
 ! Day 10
+! Part 2: reading across rows, - does nothing, | flips, corners only flip if they leave in different vertical directions.
+! So can have | -> +1, F or 7 -> +1/2, L or J -> -1/2, all multiplied by 0 if non-loop. Then mod 2 ( i.e. 2 rem ) current sum, and take the floor.
+! That gives either 0 or 1, for whether to count a non-loop tile.
 
 : read-10 ( -- strings ) "10.txt" read-input ;
 : positions ( strings -- poss ) [ length [0..b) ] [ first length [0..b) ] bi [ swap 2array ] cartesian-map concat ;
@@ -381,5 +384,42 @@ USE: backtrack
     ]
     [ [ 2drop f ] dip ] ! ( hist' f map )
   if ;
-: find-loop ( start-connections start-pos map -- loop ) swapd [ 1array ] 2dip [ over ] [ next-in-loop ] while 2drop ;
-: run-10-1 ( strings -- n ) parse-10 [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop ] curry curry map [ ] find nip length 2 / ;
+: find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1array ] 2dip [ over ] [ next-in-loop ] while 2drop ;
+: find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
+: loop-bounds ( loop -- corners ) [ unclip [ [ min ] 2map ] reduce ] [ unclip [ [ max ] 2map ] reduce ] bi 2array ;
+: partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second [ first ] map sort ] bi 2array ] map ;
+:: get-row-vals ( row col-range hash -- vals )
+  hash >alist [ first first col-range member? ] filter [ first second row = ] filter values ;
+: dirs-to-pipe ( dir1 dir2 -- char ) 2array sort {
+    { { { -1 0 } { 0 -1 } } [ CHAR: J ] }
+    { { { -1 0 } { 0 1 } } [ CHAR: 7 ] }
+    { { { -1 0 } { 1 0 } } [ CHAR: - ] }
+    { { { 0 -1 } { 0 1 } } [ CHAR: | ] }
+    { { { 0 -1 } { 1 0 } } [ CHAR: L ] }
+    { { { 0 1 } { 1 0 } } [ CHAR: F ] }
+  } case ;
+: char-halfval ( char -- n ) {
+    { CHAR: | [ 2 ] }
+    { CHAR: F [ 1 ] }
+    { CHAR: 7 [ 1 ] }
+    { CHAR: L [ -1 ] }
+    { CHAR: J [ -1 ] }
+    [ drop 0 ]
+  } case ;
+ : get-start-pipe ( loop -- char ) [ [ second ] [ first ] bi v- ] [ [ last ] [ first ] bi v- ] bi dirs-to-pipe ;
+: fix-start-pipe ( loop map -- map' ) [ [ get-start-pipe ] [ first ] bi ] dip ?set-at ;
+: comb-hc ( hc1 hc2 -- newhc ) 2dup [ odd? ] both? [ - ] [ + ]  if ;
+:: count-internal ( row-cols pipe-map -- n )
+  row-cols first :> row
+  row-cols second :> cols
+  cols [ first ] [ last ] bi [a..b] :> row-indices
+  row row-indices pipe-map get-row-vals :> row-vals
+  row-indices cols [ member? 0 1 ? ] curry map :> pipe-weights
+  row-indices cols [ dupd member? [ row 2array pipe-map at char-halfval ] [ drop 0 ] if ] curry map :> turn-halfcounts
+  turn-halfcounts 0 [ comb-hc ] accumulate* [ 2 / floor 2 rem ] map :> turn-weights
+  pipe-weights turn-weights [ * ] 2map :> weights
+  weights sum ;
+: prepare-10 ( strings -- loop map ) parse-10 [ find-loop ] keep dupd fix-start-pipe ;
+: run-10-1 ( loop map -- n ) drop length 2 / ;
+: run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] keep [ count-internal ] curry map sum ;
+: run-10 ( -- ) read-10 prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;

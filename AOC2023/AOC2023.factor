@@ -13,6 +13,8 @@ IN: AOC2023
 : parse-nums ( string -- ns ) split-words [ string>number ] map ;
 : firsts ( seqs -- seq ) [ first ] map ;
 : seconds ( seqs -- seq ) [ second ] map ;
+: pmin ( seq1 seq2 -- newseq ) [ min ] 2map ;
+: pmax ( seq1 seq2 -- newseq ) [ max ] 2map ;
 
 
 ! Day 1
@@ -63,8 +65,7 @@ C: <state> state
 : inc-bag ( bag seq -- bag' ) [ first string>number ] [ second colour>n ] bi -rot max-nth ;
 : to-bag ( string -- bag ) "," split [ rest split-words ] map empty-bag [ inc-bag ] reduce ;
 : to-bags ( string -- seq ) ":;" split rest [ to-bag ] map ;
-: bag-max ( bag bag' -- bag'' ) [ max ] 2map ;
-: min-bag ( string -- bag ) to-bags empty-bag [ bag-max ] reduce ;
+: min-bag ( string -- bag ) to-bags empty-bag [ pmax ] reduce ;
 : valid ( string bag -- ? ) [ min-bag ] dip [ <= ] 2all? ;
 : n-if-valid ( string n bag -- n ) swapd valid [ 1 + ] [ drop 0 ] if ;
 
@@ -386,8 +387,8 @@ USE: backtrack
   if ;
 : find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1array ] 2dip [ over ] [ next-in-loop ] while 2drop ;
 : find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
-: loop-bounds ( loop -- corners ) [ unclip [ [ min ] 2map ] reduce ] [ unclip [ [ max ] 2map ] reduce ] bi 2array ;
-: partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second [ first ] map sort ] bi 2array ] map ;
+: loop-bounds ( loop -- corners ) [ unclip [ pmin ] reduce ] [ unclip [ pmax ] reduce ] bi 2array ;
+: partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second firsts sort ] bi 2array ] map ;
 :: get-row-vals ( row col-range hash -- vals )
   hash >alist [ first first col-range member? ] filter [ first second row = ] filter values ;
 : dirs-to-pipe ( dir1 dir2 -- char ) 2array sort {

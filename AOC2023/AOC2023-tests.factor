@@ -192,3 +192,29 @@ int-test
 [ process-09 run-09-1 ] 114
 [ process-09 run-09-2 ] 2
 int-bitest
+
+[
+{
+"....."
+".S-7."
+".|.|."
+".L-J."
+"....."
+}
+run-10-1
+]
+4
+int-test
+
+[
+{
+"..F7."
+".FJ|."
+"SJ.L7"
+"|F--J"
+"LJ..."
+}
+run-10-1
+]
+8
+int-test

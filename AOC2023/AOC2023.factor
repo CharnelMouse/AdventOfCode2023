@@ -337,3 +337,49 @@ USE: backtrack
 : run-09-1 ( pair -- n ) second ;
 : run-09-2 ( pair -- n ) first ;
 : run-09 ( -- ) read-09 process-09 [ run-09-1 . ] [ run-09-2 . ] bi ;
+
+
+! Day 10
+
+: read-10 ( -- strings ) "10.txt" read-input ;
+: positions ( strings -- poss ) [ length [0..b) ] [ first length [0..b) ] bi [ swap 2array ] cartesian-map concat ;
+: parse-10 ( strings -- map ) [ positions ] [ concat ] bi [ 2array ] 2map >hashtable ;
+: find-start ( map -- pos )  [ keys ] [ values ] bi CHAR: S [ = ] curry find drop swap nth ;
+: valid-pos? ( map pos -- ? ) swap key? ;
+: mpipe ( map pos -- pipe/f ) swap at ;
+: compass-directions ( -- seq ) { { 0 -1 } { 1 0 } { 0 1 } { -1 0 } } ;
+: mneighbours ( pos -- dir-pos-pairs ) compass-directions [ [ v+ ] keep swap 2array ] with map ;
+: in-map ( map dir-pos-pairs -- dir-pos-val-triples ) swap [ dupd [ second ] dip ?at [ suffix ] [ 2drop f ] if ] curry map sift ;
+: up ( -- pair ) { 0 -1 } ; inline
+: down ( -- pair ) { 0 1 } ; inline
+: left ( -- pair ) { -1 0 } ; inline
+: right ( -- pair ) { 1 0 } ; inline
+: opposing? ( pair pair' -- ? ) v+ [ 0 = ] all? ;
+: facing-lookup ( -- seq ) {
+  { CHAR: | [ up down 2array ] }
+  { CHAR: - [ right left 2array ] }
+  { CHAR: L [ up right 2array ] }
+  { CHAR: J [ up left 2array ] }
+  { CHAR: 7 [ down left 2array ] }
+  { CHAR: F [ right down 2array ] }
+  { CHAR: S [ t ] }
+  [ drop f ] } ; inline
+: facings ( char -- pair/? ) facing-lookup case ;
+: connects-in? ( dir-pos-val -- ? ) first3 nip facings dup [ swap [ opposing? ] curry any? ] [ 2drop f ] if ;
+: valid-neighbours ( map pos -- dir-pos-val-s ) mneighbours in-map [ connects-in? ] filter ;
+: find-start-connections ( start map -- dir-pos-val-s ) swap valid-neighbours ;
+: next-dir-in-loop ( dir-pos-val -- dir' ) first3 nip facings swap [ opposing? ] curry reject first ;
+: next-in-loop ( hist dir-pos-val map -- hist' dir'-pos'-val'/f map )
+  [ [ second ] keep ] dip ! ( hist pos dir-pos-val map )
+  [ [ 2dup swap member? [ drop f ] [ suffix t ] if ] keep ] 2dip ! ( hist' ? pos dir-pos-val map )
+  [ rot ] dip swap ! ( hist' pos dir-pos-val map ? )
+    [
+      [ next-dir-in-loop ] dip ! ( hist pos dir' map )
+      [ [ v+ ] keep ] dip ! ( hist pos' dir' map ) ;
+      [ swap [ 2array ] keep ] dip ! ( hist dir'-pos' pos' map )
+      [ at suffix ] keep ! ( hist dir'-pos'-val' map )
+    ]
+    [ [ 2drop f ] dip ] ! ( hist' f map )
+  if ;
+: find-loop ( start-connections start-pos map -- loop ) swapd [ 1array ] 2dip [ over ] [ next-in-loop ] while 2drop ;
+: run-10-1 ( strings -- n ) parse-10 [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop ] curry curry map [ ] find nip length 2 / ;

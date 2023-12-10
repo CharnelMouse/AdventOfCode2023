@@ -108,7 +108,7 @@ C: <pos> pos
 : symbol-positions ( strings -- poss ) [ sym-poss ] map-index concat ;
 : gear-positions ( strings -- poss ) [ gear-poss ] map-index concat ;
 
-: bi@diff1 ( quot: ( x -- n ) -- ? ) bi@ - abs 1 <= ; inline
+: bi@diff1 ( x1 x2 quot: ( x -- n ) -- ? ) bi@ - abs 1 <= ; inline
 : L1-dist1 ( pos pos -- ? ) [ [ x>> ] bi@diff1 ] [ [ y>> ] bi@diff1 ] 2bi and ;
 : adjacent? ( nb pos -- ? ) [ L1-dist1 ] curry any? ;
 : adjacent ( nbs pos -- nbs ) [ adjacent? ] curry filter ;

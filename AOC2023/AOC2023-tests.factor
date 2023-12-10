@@ -189,6 +189,6 @@ int-test
 { 1 3 6 10 15 21 }
 { 10 13 16 21 30 45 }
 }
-[ run-09-1 ] 114
-[ run-09-2 ] 2
+[ process-09 run-09-1 ] 114
+[ process-09 run-09-2 ] 2
 int-bitest

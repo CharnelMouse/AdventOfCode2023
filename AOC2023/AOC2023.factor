@@ -1,4 +1,4 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
 IN: AOC2023
@@ -329,8 +329,8 @@ USE: backtrack
 
 : read-09 ( -- seqs ) "09.txt" read-input [ split-words [ string>number ] map ] map ;
 : all-equal? ( seq -- ? ) [ first ] keep swap [ = ] curry all? ;
-: next-num ( seq -- n ) dup all-equal? [ first ] [ [ last ] [ 2 <clumps> [ first2 swap - ] map next-num ] bi + ] if ; recursive
-: prev-num ( seq -- n ) dup all-equal? [ first ] [ [ first ] [ 2 <clumps> [ first2 swap - ] map prev-num ] bi - ] if ; recursive
-: run-09-1 ( seqs -- n ) [ next-num ] map-sum ;
-: run-09-2 ( seqs -- n ) [ prev-num ] map-sum ;
-: run-09 ( -- ) read-09 [ run-09-1 . ] [ run-09-2 . ] bi ;
+: outer-nums ( seq -- pair ) dup all-equal? [ first dup 2array ] [ [ [ first ] [ last ] bi 2array ] [ 2 <clumps> [ first2 swap - ] map outer-nums { -1 1 } v* ] bi v+ ] if ;
+: process-09 ( seqs -- pair ) [ outer-nums ] [ v+ ] map-reduce ;
+: run-09-1 ( pair -- n ) second ;
+: run-09-2 ( pair -- n ) first ;
+: run-09 ( -- ) read-09 process-09 [ run-09-1 . ] [ run-09-2 . ] bi ;

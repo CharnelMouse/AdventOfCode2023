@@ -389,8 +389,6 @@ USE: backtrack
 : find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
 : loop-bounds ( loop -- corners ) [ unclip [ pmin ] reduce ] [ unclip [ pmax ] reduce ] bi 2array ;
 : partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second firsts sort ] bi 2array ] map ;
-:: get-row-vals ( row col-range hash -- vals )
-  hash >alist [ first first col-range member? ] filter [ first second row = ] filter values ;
 : dirs-to-pipe ( dir1 dir2 -- char ) 2array sort {
     { { { -1 0 } { 0 -1 } } [ CHAR: J ] }
     { { { -1 0 } { 0 1 } } [ CHAR: 7 ] }

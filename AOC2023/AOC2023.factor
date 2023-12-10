@@ -10,6 +10,9 @@ IN: AOC2023
 : replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
 : split-words-multspace ( seq -- seq ) split-words harvest ;
 : cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
+: parse-nums ( string -- ns ) split-words [ string>number ] map ;
+: firsts ( seqs -- seq ) [ first ] map ;
+: seconds ( seqs -- seq ) [ second ] map ;
 
 
 ! Day 1
@@ -152,7 +155,6 @@ C: <pos> pos
 : lengthed-range ( start length -- range ) over + [a..b) ;
 : while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
 : empty-range ( -- range ) T{ range { step 1 } } ;
-: parse-perm ( string -- seq ) split-words [ string>number ] map ;
 : permdiff ( perm -- n ) [ first ] [ second ] bi - ;
 
 : parse-seeds ( string -- seeds ) first split-words rest [ string>number ] map ;
@@ -184,7 +186,7 @@ C: <pos> pos
 : ap-n ( n perm -- n-? ) 2dup within? [ permdiff + dirty ] [ drop clean ] if ;
 : apply-perm-n ( n-f perm -- n-? ) [ remove-flag ] dip ap-n ;
 : apply-perm-if-clean-n ( n-? perm -- n-? ) [ apply-perm-n ] curry [ ] if-clean ;
-: bind-range-n ( seq<n-?> perm-string -- seq<n-?> ) parse-perm [ apply-perm-if-clean-n ] curry map ;
+: bind-range-n ( seq<n-?> perm-string -- seq<n-?> ) parse-nums [ apply-perm-if-clean-n ] curry map ;
 : apply-map-n ( ns map -- ns ) rest swap [ clean ] map [ bind-range-n ] reduce [ remove-flag ] map ;
 : next-map-n ( ns maps -- ns rest-maps ) cut-paragraph [ apply-map-n ] dip ;
 : run-05-1 ( strings -- n ) cut-seeds [ next-map-n ] while-nonempty drop infimum ;
@@ -192,10 +194,10 @@ C: <pos> pos
 : ap-r ( range perm -- seq<range-?> ) [ split-by-perm ] keep inc-middle-range c-d-c reject-empty ;
 : apply-perm-r ( r-f perm -- seq<r-?> ) [ remove-flag ] dip ap-r ;
 : apply-perm-if-clean-r ( r-? perm -- seq<r-?> ) [ apply-perm-r ] curry [ as-seq ] if-clean ;
-: bind-range-r ( seq<r-?> perm-string -- seq<r-?> ) parse-perm [ apply-perm-if-clean-r ] curry map concat ;
+: bind-range-r ( seq<r-?> perm-string -- seq<r-?> ) parse-nums [ apply-perm-if-clean-r ] curry map concat ;
 : apply-map-r ( rs map -- rs ) rest swap [ clean ] map [ bind-range-r ] reduce [ remove-flag ] map ;
 : next-map-r ( rs maps -- rs rest-maps ) cut-paragraph [ apply-map-r ] dip ;
-: run-05-2 ( strings -- n ) cut-seed-ranges [ next-map-r ] while-nonempty drop [ first ] map infimum ;
+: run-05-2 ( strings -- n ) cut-seed-ranges [ next-map-r ] while-nonempty drop firsts infimum ;
 
 : run-05 ( -- ) read-05 [ run-05-1 . ] [ run-05-2 . ] bi ;
 
@@ -266,7 +268,7 @@ USE: backtrack
   mod1 mod2 gcd :> ( mult1 d )
   d mult1 mod1 mod2 mults :> mult2
   mod1 mod2 * d / :> newmod
-  xs1 xs2 [ 2array ] cartesian-map concat [ first2 [ d rem ] bi@ = ] filter :> xpairs
+  xs1 xs2 [ 2array ] cartesian-map concat [ first2 [ d rem ] same? ] filter :> xpairs
   xpairs [ first2 [ mod2 * mult2 * ] dip mod1 * mult1 * + d / newmod rem ] map unique keys :> xs
   newmod xs ;
 : combine-congruences ( cong1 cong2 -- new-cong ) [ first2 ] bi@ crt-mod 2array ;
@@ -297,8 +299,9 @@ USE: backtrack
   if ;
 : cycle-start ( start-loop ndir end-index -- n ) 1 + over rem [ * ] dip + ;
 : leadin-time ( path -- n ) first length ;
-: path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1array ] map ] curry map unclip [ [ append ] 2map ] reduce concat [ ] filter ;
-: same-last ( cycle -- 1indexes ) [ [ 2array ] { } map-index-as ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
+: path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1array ] map ] curry map unclip [ [ append ] 2map ] reduce concat sift ;
+: with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
+: same-last ( cycle -- 1indexes ) [ with-indices ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
 : possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
 : shorten-cycle ( cycle -- cycle ) possible-groups [ dup first [ = ] curry all? ] filter first first >array ;
 : clean-path ( path start-loop ndir end-index -- clean-path ) [ path-arr ] 3dip cycle-start [ head ] [ tail shorten-cycle ] 2bi 2array ;
@@ -310,10 +313,10 @@ USE: backtrack
 : split-cycle ( n path -- path1 path2 ) tuck second length rem 1array [ second ] dip split-indices first2 ;
 : nrot-seq ( n path -- path' ) tuck split-cycle over append [ [ first ] dip append ] dip 2array ;
 : collapse-to-common-start ( paths -- leadin-time paths' ) [ [ leadin-time ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
-: indices-where ( seq quot: ( el -- ? ) -- ns ) [ [ 2array ] { } map-index-as ] dip [ first ] prepose filter [ second ] map ; inline
+: indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
 : end-loc? ( string -- ? ) CHAR: Z ends-with? ;
 : end-indices ( seq -- ns ) [ end-loc? ] indices-where ;
-: check-early-end ( paths -- cycles n/? ) [ [ second ] map ] [ [ first ] map ] bi [ end-indices ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
+: check-early-end ( paths -- cycles n/? ) [ seconds ] [ firsts ] bi [ end-indices ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
 : end-cong ( cycle -- mod-vals-pair ) [ length ] [ end-indices ] bi 2array ;
 : solve-cycles ( cycles -- n ) [ end-cong ] map unclip [ combine-congruences ] reduce second dup empty? [ ] when infimum ;
 
@@ -327,7 +330,7 @@ USE: backtrack
 
 ! Day 9
 
-: read-09 ( -- seqs ) "09.txt" read-input [ split-words [ string>number ] map ] map ;
+: read-09 ( -- seqs ) "09.txt" read-input [ parse-nums ] map ;
 : all-equal? ( seq -- ? ) [ first ] keep swap [ = ] curry all? ;
 : outer-nums ( seq -- pair ) dup all-equal? [ first dup 2array ] [ [ [ first ] [ last ] bi 2array ] [ 2 <clumps> [ first2 swap - ] map outer-nums { -1 1 } v* ] bi v+ ] if ;
 : process-09 ( seqs -- pair ) [ outer-nums ] [ v+ ] map-reduce ;

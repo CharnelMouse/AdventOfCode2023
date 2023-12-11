@@ -1,6 +1,7 @@
 USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
+FROM: sequences.extras => first= second= last= 3map-reduce index* ;
 IN: AOC2023
 
 ! Common words
@@ -16,6 +17,9 @@ IN: AOC2023
 : pmin ( seq1 seq2 -- newseq ) [ min ] 2map ;
 : pmax ( seq1 seq2 -- newseq ) [ max ] 2map ;
 : partition-by ( seq quot: ( elt -- key ) -- seqs ) collect-by >alist ; inline
+: manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
+: map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
+: map-sum-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map-sum ; inline
 
 
 ! Day 1
@@ -235,7 +239,7 @@ C: <pos> pos
 : hand-ranks ( pair prep: ( card -- card ) -- ns ) [ first ] dip map ranks ; inline
 : sort-by-hand ( pairs hand-prep: ( hand-hist -- hand-alist ) card-prep: ( card -- card ) -- pairs ) [ [ hand-type ] curry partition-by ] dip [ [ hand-ranks ] curry [ sort-by ] curry [ second ] swap compose call( pair -- pairs ) ] curry map concat ; inline
 
-: best-card ( hist -- card ) >alist dup values supremum [ [ second ] dip = ] curry filter keys [ first card-rank ] supremum-by ;
+: best-card ( hist -- card ) >alist dup values supremum [ second= ] curry filter keys [ first card-rank ] supremum-by ;
 : add-free ( hist n -- alist ) [ dup best-card 2dup swap at ] dip + set-of ;
 : free-hand ( n -- alist ) "A" swap 2array 1array ;
 : best-hand ( hist n-free -- alist ) [ >alist ] dip over length 0 > [ add-free ] [ nip free-hand ] if ;
@@ -307,20 +311,19 @@ USE: backtrack
 : leadin-time ( path -- n ) first length ;
 : path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1vector ] map ] curry map unclip [ [ append! ] 2map ] reduce concat sift ;
 : with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
-: same-last ( cycle -- 1indexes ) [ with-indices ] [ last [ [ first ] dip = ] curry ] bi filter [ second 1 + ] map ;
+: same-last ( cycle -- 1indexes ) [ with-indices ] [ last [ first= ] curry ] bi filter [ second 1 + ] map ;
 : possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
 : shorten-cycle ( cycle -- cycle ) possible-groups [ dup first [ = ] curry all? ] filter first first >array ;
 : clean-path ( path start-loop ndir end-index -- clean-path ) [ path-arr ] 3dip cycle-start [ head ] [ tail shorten-cycle ] 2bi 2array ;
 : move-until-cycle ( path network directions -- clean-path ) 0 f [ dup ] [ drop move-08 ] until [ nip length ] 2dip -rot clean-path ;
 
-: ends-with? ( seq x -- ? ) [ last ] dip = ;
-: starts ( map -- seq ) keys [ CHAR: A ends-with? ] filter ;
+: starts ( map -- seq ) keys [ CHAR: A last= ] filter ;
 :: paths ( directions network -- paths ) network starts [ 1array 0 directions length <path-buckets> [ set-nth ] keep ] map ;
 : split-cycle ( n path -- path1 path2 ) tuck second length rem 1array [ second ] dip split-indices first2 ;
 : nrot-seq ( n path -- path' ) tuck split-cycle over append [ [ first ] dip append ] dip 2array ;
 : collapse-to-common-start ( paths -- leadin-time paths' ) [ [ leadin-time ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
 : indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
-: end-loc? ( string -- ? ) CHAR: Z ends-with? ;
+: end-loc? ( string -- ? ) CHAR: Z last= ;
 : end-indices ( seq -- ns ) [ end-loc? ] indices-where ;
 : check-early-end ( paths -- cycles n/? ) [ seconds ] [ firsts ] bi [ end-indices ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;
 : end-cong ( cycle -- mod-vals-pair ) [ length ] [ end-indices ] bi 2array ;
@@ -372,7 +375,7 @@ USE: backtrack
 : next-dir-in-loop ( dir-pos-val -- dir' ) first3 nip facings swap [ opposing? ] curry reject first ;
 : next-in-loop ( hist dir-pos-val map -- hist' dir'-pos'-val'/f map )
   [ [ second ] keep ] dip ! ( hist pos dir-pos-val map )
-  [ [ 2dup swap first = [ drop f ] [ suffix! t ] if ] keep ] 2dip ! ( hist' ? pos dir-pos-val map )
+  [ [ 2dup first= [ drop f ] [ suffix! t ] if ] keep ] 2dip ! ( hist' ? pos dir-pos-val map )
   [ rot ] dip swap ! ( hist' pos dir-pos-val map ? )
     [
       [ next-dir-in-loop ] dip ! ( hist pos dir' map )
@@ -388,7 +391,7 @@ USE: backtrack
 : in-map ( map dir-pos-pairs -- dir-pos-val-triples ) swap [ dupd [ second ] dip ?at [ suffix ] [ 2drop f ] if ] curry map sift ;
 : connects-in? ( dir-pos-val -- ? ) first3 nip facings dup [ swap [ opposing? ] curry any? ] [ 2drop f ] if ;
 : valid-neighbours ( map pos -- dir-pos-val-s ) mneighbours in-map [ connects-in? ] filter ;
-: find-start ( map -- pos )  [ keys ] [ values ] bi CHAR: S [ = ] curry find drop swap nth ;
+: find-start ( map -- pos )  [ keys ] [ values ] bi CHAR: S index* swap nth ;
 : find-start-connections ( start map -- dir-pos-val-s ) swap valid-neighbours ;
 : find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1vector ] 2dip [ over ] [ next-in-loop ] while 2drop ;
 : find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
@@ -408,7 +411,7 @@ USE: backtrack
 
 : partition-pipes-by-row ( loop -- row-cols-pairs ) [ second ] partition-by [ firsts sort ] assoc-map ;
 
-: row-partial-at ( row hash -- hash' ) [ drop [ second ] dip = ] with assoc-filter [ [ first ] dip ] assoc-map ;
+: row-partial-at ( row hash -- hash' ) [ drop second= ] with assoc-filter [ [ first ] dip ] assoc-map ;
 : to-range ( sorted-ns -- range ) [ first ] [ last ] bi [a..b] ;
 : nonloop-weights ( cols pipe-cols -- seq ) [ member? 0 1 ? ] curry map ;
 : char-halfval ( char -- n ) {
@@ -440,14 +443,14 @@ USE: backtrack
 : row-mults ( strings n -- mults ) [ 1 ? ] curry [ [ CHAR: . = ] all? ] prepose map ;
 : col-mults ( strings n -- mults ) [ unclip [ CHAR: . = ] { } map-as [ [ CHAR: . = ] { } map-as [ and ] 2map ] reduce ] dip [ 1 ? ] curry map ;
 : galaxies ( strings -- poss ) [ swap [ CHAR: # = ] indices-where [ swap 2array ] with map ] map-index concat ;
-: manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
-: weighted-manhattan-distance ( pos pos xweights yweights -- n ) [ 2dup ] 2dip [ [ [ first ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip swap [ [ [ second ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip + ;
+: weights-11 ( strings n -- xweights-yweights-pair ) [ [ col-mults ] curry ] [ [ row-mults ] curry ] bi bi 2array ;
+: weighted-1d-distance ( x y weights -- n ) [ [ min ] [ max ] 2bi ] dip <slice> sum ;
+: weighted-manhattan-distance ( pos pos weights -- n ) [ weighted-1d-distance ] [ + ] 3map-reduce ;
 : unordered-pairs ( seq -- pairs ) dup length <iota> dup [ 2array ] cartesian-map concat [ first2 < ] filter [ [ swap nth ] with map ] with map ;
-: map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
 
 : read-11 ( -- strings ) "11.txt" read-input ;
-: run-11-1 ( strings -- n ) [ [ 2 col-mults ] [ 2 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
-: run-11-ex10 ( strings -- n ) [ [ 10 col-mults ] [ 10 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
-: run-11-ex100 ( strings -- n ) [ [ 100 col-mults ] [ 100 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
-: run-11-2 ( strings -- n ) [ [ 1,000,000 col-mults ] [ 1,000,000 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
-: run-11 ( -- ) read-11 [ run-11-1 . ] [ run-11-2 . ] bi ;
+: process-11 ( strings -- galaxies strings ) [ galaxies ] keep ;
+: run-11-n ( galaxies strings n -- n ) weights-11 [ weighted-manhattan-distance ] curry map-sum-unordered-pairs ;
+: run-11-1 ( galaxies strings -- n ) 2 run-11-n ;
+: run-11-2 ( galaxies strings -- n ) 1,000,000 run-11-n ;
+: run-11 ( -- ) read-11 process-11 [ run-11-1 . ] [ run-11-2 . ] 2bi ;

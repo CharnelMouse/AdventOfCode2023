@@ -290,7 +290,7 @@ int-test
 ".......#.."
 "#...#....."
 }
-[ run-11-1 ] 374
-[ run-11-ex10 ] 1030
-[ run-11-ex100 ] 8410
+[ process-11 run-11-1 ] 374
+[ process-11 10 run-11-n ] 1030
+[ process-11 100 run-11-n ] 8410
 int-tritest

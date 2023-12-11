@@ -269,7 +269,7 @@ The documentation for gcd is wrong: a is actually the required multiplier for ax
 Example code to show this:
 USE: backtrack
 : check-gcd ( x y -- ? ) 2dup gcd [ * ] dip - swap mod 0 = ;
-:: check-gcd-opp-spec ( x y -- ? ) [ swap ] [ gcd ] bi [ * ] dip - swap mod 0 = ;
+: check-gcd-opp-spec ( x y -- ? ) [ swap ] [ gcd ] 2bi [ * ] dip - swap mod 0 = ;
 [ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd not must-be-true 2array . t ] [ "All good." print ] if-amb drop
 [ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd-opp-spec not must-be-true 2array . t ] [ "All good." print ] if-amb drop
 */

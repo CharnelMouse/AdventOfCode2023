@@ -4,6 +4,7 @@ IN: AOC2023.tests
 : int-test ( quot: ( -- n ) n -- ) 1array swap unit-test ;
 : task-out ( quot: ( data -- n ) n -- quot: ( data -- ) ) [ [ curry ] curry ] dip [ int-test ] curry append ; inline
 : int-bitest ( data quot: ( data -- n ) n quot: ( data -- n ) n -- ) [ task-out ] 2bi@ bi ; inline
+: int-tritest ( data quot: ( data -- n ) n quot: ( data -- n ) n quot: ( data -- n ) n -- ) [ [ task-out ] 2bi@ ] 2dip task-out tri ; inline
 
 [
 {
@@ -277,7 +278,6 @@ run-10-2
 10
 int-test
 
-[
 {
 "...#......"
 ".......#.."
@@ -290,7 +290,7 @@ int-test
 ".......#.."
 "#...#....."
 }
-run-11-1
-]
-374
-int-test
+[ run-11-1 ] 374
+[ run-11-ex10 ] 1030
+[ run-11-ex100 ] 8410
+int-tritest

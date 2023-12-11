@@ -437,8 +437,8 @@ USE: backtrack
 
 ! Day 11
 
-: row-mults ( strings -- mults ) [ [ CHAR: . = ] all? 2 1 ? ] map ;
-: col-mults ( strings -- mults ) unclip [ CHAR: . = ] { } map-as [ [ CHAR: . = ] { } map-as [ and ] 2map ] reduce [ 2 1 ? ] map ;
+: row-mults ( strings n -- mults ) [ 1 ? ] curry [ [ CHAR: . = ] all? ] prepose map ;
+: col-mults ( strings n -- mults ) [ unclip [ CHAR: . = ] { } map-as [ [ CHAR: . = ] { } map-as [ and ] 2map ] reduce ] dip [ 1 ? ] curry map ;
 : galaxies ( strings -- poss ) [ swap [ CHAR: # = ] indices-where [ swap 2array ] with map ] map-index concat ;
 : manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
 : weighted-manhattan-distance ( pos pos xweights yweights -- n ) [ 2dup ] 2dip [ [ [ first ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip swap [ [ [ second ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip + ;
@@ -446,4 +446,8 @@ USE: backtrack
 : map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
 
 : read-11 ( -- strings ) "11.txt" read-input ;
-: run-11-1 ( strings -- n ) [ [ col-mults ] [ row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
+: run-11-1 ( strings -- n ) [ [ 2 col-mults ] [ 2 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
+: run-11-ex10 ( strings -- n ) [ [ 10 col-mults ] [ 10 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
+: run-11-ex100 ( strings -- n ) [ [ 100 col-mults ] [ 100 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
+: run-11-2 ( strings -- n ) [ [ 1,000,000 col-mults ] [ 1,000,000 row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;
+: run-11 ( -- ) read-11 [ run-11-1 . ] [ run-11-2 . ] bi ;

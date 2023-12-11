@@ -433,3 +433,17 @@ USE: backtrack
 : run-10-1 ( loop map -- n ) drop length 2 / ;
 : run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] dip [ count-internal ] curry map-sum ;
 : run-10 ( -- ) read-10 prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;
+
+
+! Day 11
+
+: row-mults ( strings -- mults ) [ [ CHAR: . = ] all? 2 1 ? ] map ;
+: col-mults ( strings -- mults ) unclip [ CHAR: . = ] { } map-as [ [ CHAR: . = ] { } map-as [ and ] 2map ] reduce [ 2 1 ? ] map ;
+: galaxies ( strings -- poss ) [ swap [ CHAR: # = ] indices-where [ swap 2array ] with map ] map-index concat ;
+: manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
+: weighted-manhattan-distance ( pos pos xweights yweights -- n ) [ 2dup ] 2dip [ [ [ first ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip swap [ [ [ second ] bi@ [ min ] [ max ] 2bi ] dip <slice> sum ] dip + ;
+: unordered-pairs ( seq -- pairs ) dup length <iota> dup [ 2array ] cartesian-map concat [ first2 < ] filter [ [ swap nth ] with map ] with map ;
+: map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
+
+: read-11 ( -- strings ) "11.txt" read-input ;
+: run-11-1 ( strings -- n ) [ [ col-mults ] [ row-mults ] bi ] keep galaxies -rot [ weighted-manhattan-distance ] 2curry map-unordered-pairs sum ;

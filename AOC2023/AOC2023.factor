@@ -15,6 +15,7 @@ IN: AOC2023
 : seconds ( seqs -- seq ) [ second ] map ;
 : pmin ( seq1 seq2 -- newseq ) [ min ] 2map ;
 : pmax ( seq1 seq2 -- newseq ) [ max ] 2map ;
+: partition-by ( seq quot: ( elt -- key ) -- seqs ) collect-by >alist ; inline
 
 
 ! Day 1
@@ -227,7 +228,6 @@ C: <pos> pos
 : card-rank ( card -- n ) dup digit? [ 1string string>number ] [ picture-value ] if ;
 : ranks ( hand -- ns ) concat [ card-rank ] { } map-as ;
 : pair-value ( pair n -- n ) [ second ] dip 1 + * ;
-: partition-by ( seq quot: ( elt -- key ) -- seqs ) [ sort-by ] keep group-by ; inline
 : hand-type ( pair prep: ( hand -- hand ) -- type ) [ first histogram ] dip call hist-type ; inline
 : hand-ranks ( pair prep: ( card -- card ) -- ns ) [ first ] dip map ranks ; inline
 : sort-by-hand ( pairs hand-prep: ( hand-hist -- hand-alist ) card-prep: ( card -- card ) -- pairs ) [ [ hand-type ] curry partition-by ] dip [ [ hand-ranks ] curry [ sort-by ] curry [ second ] swap compose call( pair -- pairs ) ] curry map concat ; inline
@@ -399,9 +399,10 @@ USE: backtrack
 
 : loop-bounds ( loop -- corners ) [ unclip [ pmin ] reduce ] [ unclip [ pmax ] reduce ] bi 2array ;
 
-: partition-pipes-by-row ( loop map -- row-cols-pairs ) drop [ second ] partition-by [ [ first ] [ second firsts sort ] bi 2array ] map ;
+: partition-pipes-by-row ( loop -- row-cols-pairs ) [ second ] partition-by [ firsts sort ] assoc-map ;
 
-: row-partial-at ( row hash -- hash' ) >alist [ first second = ] with filter [ [ first first ] [ second ] bi 2array ] map >hashtable ;
+: row-partial-at ( row hash -- hash' ) [ drop [ second ] dip = ] with assoc-filter [ [ first ] dip ] assoc-map ;
+: to-range ( sorted-ns -- range ) [ first ] [ last ] bi [a..b] ;
 : nonloop-weights ( cols pipe-cols -- seq ) [ member? 0 1 ? ] curry map ;
 : char-halfval ( char -- n ) {
     { CHAR: | [ 2 ] }
@@ -415,17 +416,13 @@ USE: backtrack
 : halfturns ( cols pipe-cols row-pipe-map -- hts ) [ halfturn ] 2curry map ;
 : comb-hc ( hc1 hc2 -- newhc ) 2dup [ odd? ] both? [ - ] [ + ] if ;
 : accumulate-halfturns ( hts -- turn-weights ) 0 [ comb-hc ] accumulate* [ 2 / floor 2 rem ] map ;
-:: count-internal ( row-cols pipe-map -- n )
-  row-cols first :> row
-  row-cols second :> pipe-cols
-  row pipe-map row-partial-at :> row-pipe-map
-  pipe-cols [ first ] [ last ] bi [a..b] :> cols
-  cols pipe-cols nonloop-weights
-  cols pipe-cols row-pipe-map halfturns accumulate-halfturns
-  [ * ] 2map sum ;
+: count-internal ( row-cols pipe-map -- n )
+  [ [ second [ to-range ] keep ] [ first ] bi ] dip row-partial-at
+  [ halfturns accumulate-halfturns ] curry [ nonloop-weights ] 2bi
+  [ * ] [ + ] 2map-reduce ;
 
 : read-10 ( -- strings ) "10.txt" read-input ;
 : prepare-10 ( strings -- loop map ) parse-10 [ find-loop ] keep dupd fix-start-pipe ;
 : run-10-1 ( loop map -- n ) drop length 2 / ;
-: run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] keep [ count-internal ] curry map sum ;
+: run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] dip [ count-internal ] curry map-sum ;
 : run-10 ( -- ) read-10 prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;

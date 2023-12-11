@@ -20,6 +20,8 @@ IN: AOC2023
 : manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
 : map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
 : map-sum-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map-sum ; inline
+: while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
+: indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
 
 
 ! Day 1
@@ -162,7 +164,6 @@ C: <pos> pos
 : read-05 ( -- strings ) "05.txt" read-input ;
 
 : lengthed-range ( start length -- range ) over + [a..b) ;
-: while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
 : empty-range ( -- range ) T{ range { step 1 } } ;
 : permdiff ( perm -- n ) [ first ] [ second ] bi - ;
 
@@ -322,7 +323,6 @@ USE: backtrack
 : split-cycle ( n path -- path1 path2 ) tuck second length rem 1array [ second ] dip split-indices first2 ;
 : nrot-seq ( n path -- path' ) tuck split-cycle over append [ [ first ] dip append ] dip 2array ;
 : collapse-to-common-start ( paths -- leadin-time paths' ) [ [ leadin-time ] map [ supremum ] [ ] [ supremum ] tri [ swap - ] curry map ] keep [ nrot-seq ] 2map ;
-: indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
 : end-loc? ( string -- ? ) CHAR: Z last= ;
 : end-indices ( seq -- ns ) [ end-loc? ] indices-where ;
 : check-early-end ( paths -- cycles n/? ) [ seconds ] [ firsts ] bi [ end-indices ] map unclip [ union ] reduce dup empty? [ drop f ] [ first ] if ;

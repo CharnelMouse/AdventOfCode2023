@@ -77,6 +77,9 @@ C: <state> state
 
 
 ! Day 3 ( nb refers to numblock, a continguous digit position set that will make a number )
+! Most of the runtime is spent checking for adjacency. We might be able
+! to cut down on this with some pre-processing, and working with only numblocks
+! and their non-empty neighbours.
 
 TUPLE: pos { x integer read-only } { y integer read-only } ; 
 C: <pos> pos
@@ -245,6 +248,8 @@ C: <pos> pos
 
 
 ! Day 8
+! split-indices and last-index are big time sinks in parts 1 and 2 respectively.
+! The former might be better with slices, I'm not sure about the latter.
 
 /*
 Modular arithmetic:
@@ -341,6 +346,8 @@ USE: backtrack
 
 
 ! Day 10
+! row-partial-at is slow, this would probably be quicker using part of the original input row.
+! I'm also not sure that the hashmap is necessary.
 
 : positions ( strings -- poss ) [ length [0..b) ] [ first length [0..b) ] bi [ swap 2array ] cartesian-map concat ;
 : parse-10 ( strings -- map ) [ positions ] [ concat ] bi [ 2array ] 2map >hashtable ;

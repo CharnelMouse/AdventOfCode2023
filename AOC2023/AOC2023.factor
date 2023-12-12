@@ -18,9 +18,11 @@ IN: AOC2023
 : pmax ( seq1 seq2 -- newseq ) [ max ] 2map ;
 : partition-by ( seq quot: ( elt -- key ) -- seqs ) collect-by >alist ; inline
 : manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
+: unordered-pairs ( seq -- pairs ) dup length <iota> dup [ 2array ] cartesian-map concat [ first2 < ] filter [ [ swap nth ] with map ] with map ;
 : map-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map ; inline
 : map-sum-unordered-pairs ( seq quot: ( x x -- x ) -- seq' ) [ unordered-pairs ] dip [ first2 ] prepose map-sum ; inline
 : while-nonempty ( .. seq quot: ( .. seq -- .. seq ) -- .. seq ) [ dup empty? not ] swap while ; inline
+: with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
 : indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
 
 
@@ -311,7 +313,6 @@ USE: backtrack
 : cycle-start ( start-loop ndir end-index -- n ) 1 + over rem [ * ] dip + ;
 : leadin-time ( path -- n ) first length ;
 : path-arr ( path -- flat-path ) dup leadin-time [ f pad-tail [ 1vector ] map ] curry map unclip [ [ append! ] 2map ] reduce concat sift ;
-: with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
 : same-last ( cycle -- 1indexes ) [ with-indices ] [ last [ first= ] curry ] bi filter [ second 1 + ] map ;
 : possible-groups ( cycle -- group-sets ) dup same-last dup last [ swap / ] curry map [ integer? ] filter over length [ swap / ] curry map swap [ swap <groups> ] curry map ;
 : shorten-cycle ( cycle -- cycle ) possible-groups [ dup first [ = ] curry all? ] filter first first >array ;
@@ -446,7 +447,6 @@ USE: backtrack
 : weights-11 ( strings n -- xweights-yweights-pair ) [ [ col-mults ] curry ] [ [ row-mults ] curry ] bi bi 2array ;
 : weighted-1d-distance ( x y weights -- n ) [ [ min ] [ max ] 2bi ] dip <slice> sum ;
 : weighted-manhattan-distance ( pos pos weights -- n ) [ weighted-1d-distance ] [ + ] 3map-reduce ;
-: unordered-pairs ( seq -- pairs ) dup length <iota> dup [ 2array ] cartesian-map concat [ first2 < ] filter [ [ swap nth ] with map ] with map ;
 
 : read-11 ( -- strings ) "11.txt" read-input ;
 : process-11 ( strings -- galaxies strings ) [ galaxies ] keep ;

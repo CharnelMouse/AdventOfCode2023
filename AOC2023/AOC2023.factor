@@ -461,6 +461,8 @@ USE: backtrack
 
 
 ! Day 12
+! Half of the runtime is spent just getting subsequences, this might be removable by
+! using slices instead ( no editing in place, though, we need the original when backtracking)
 
 SYMBOL: cache-12
 : prepare-12 ( string -- string lens ) split-words first2 "," split [ string>number ] map ;

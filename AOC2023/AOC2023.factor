@@ -462,63 +462,39 @@ USE: backtrack
 
 ! Day 12
 
+SYMBOL: cache-12
 : prepare-12 ( string -- string lens ) split-words first2 "," split [ string>number ] map ;
 : expand-12 ( string lens -- string*5 lens*5 ) [ 5 swap <repetition> "?" join ] dip 5 swap <repetition> concat ;
-SYMBOL: cache-12
 : trim-.s-head ( string -- string' ) [ CHAR: . = ] trim-head ;
 : rest-if-nonempty ( string -- string' ) dup empty? [ rest ] unless ;
 : #= ( x -- ? ) CHAR: # = ;
 : .= ( x -- ? ) CHAR: . = ;
-: cache-keep-12 ( string lens val -- val ) [ -rot 2array cache-12 get set-at ] keep ;
-: pass-12 ( string lens -- 1 ) 1 cache-keep-12 ;
-: fail-12 ( string lens -- 0 ) 0 cache-keep-12 ;
-: if-else-fail ( -- ) [ fail-12 ] if ; inline
-: 1solve-12-cached ( string lens -- n )
-  2dup 2array cache-12 get ?at
-  [ 2nip ]
-  [
-    drop
-    dup empty?
-    [ over [ #= not ] all? [ pass-12 ] if-else-fail ]
-    [
-      2dup [ length ] dip [ sum ] [ length 1 - ] bi + >=
-      [
-        over first {
-          {
-            CHAR: .
-            [ [ trim-.s-head ] dip 1solve-12-cached ]
-          }
-          {
-            CHAR: #
-            [
-              2dup first head [ .= not ] all?
-              [
-                2dup
-                unclip swap [ tail ] dip over ?first #= not
-                [ [ 2drop ] 2dip [ rest-if-nonempty ] dip 1solve-12-cached ]
-                [ 2drop fail-12 ]
-                if
-              ]
-              if-else-fail
-            ]
-          }
-          {
-            CHAR: ?
-            [
-              2dup
-              [ [ rest ] dip 1solve-12-cached ]
-              [ [ rest CHAR: # prefix ] dip 1solve-12-cached ]
-              2bi +
-              cache-keep-12
-            ]
-          }
-        } case
-      ]
-      if-else-fail
-    ]
-    if
-  ]
-  if ;
+: cache-keep-12 ( val string lens -- val ) [ dup ] 2dip 2array cache-12 get set-at ;
+: pass-12 ( string lens -- 1 ) [ 1 ] 2dip cache-keep-12 ;
+: fail-12 ( string lens -- 0 ) [ 0 ] 2dip cache-keep-12 ;
+: 2if-else-fail ( string lens cond: ( x y -- ? ) true: ( x y -- n ) -- n ) [ 2dup ] 2dip [ call ] dip [ fail-12 ] if ; inline
+: quot-2-1 ( quot: ( x y -- z ) -- quot: ( x y -- z ) ) [ call( x x -- x ) ] curry ; inline
+: if-not-cached-12 ( string lens notcached: ( string lens -- n ) -- n ) [ drop ] prepose [ ] curry [ 2dup 2array cache-12 get ?at [ 2nip ] ] prepose [ if ] compose call ; inline
+
+: ?to. ( string -- string' ) rest ;
+: ?to# ( string -- string' ) rest CHAR: # prefix ;
+: enough#? ( string lens -- ? ) first head [ .= not ] all? ;
+: next-emptyable? ( string lens -- ? ) first swap ?nth #= not ;
+: fill-len ( string lens -- string' lens' ) unclip swap [ tail rest-if-nonempty ] dip ;
+
+DEFER: 1solve-12-cached
+
+: 1solve-cases-sum ( string lens -- n ) [ [ ?to. ] dip 1solve-12-cached ] [ [ ?to# ] dip 1solve-12-cached ] 2bi + ;
+: .case-12 ( string lens -- n ) [ trim-.s-head ] dip 1solve-12-cached ;
+: #case-12 ( string lens -- n ) [ [ enough#? ] [ next-emptyable? ] 2bi and ] [ fill-len 1solve-12-cached ] 2if-else-fail ;
+: ?case-12 ( string lens -- n ) [ 1solve-cases-sum ] 2keep cache-keep-12 ;
+: process-next-char ( string lens -- n ) over first { { CHAR: . [ .case-12 ] } { CHAR: # [ #case-12 ] } { CHAR: ? [ ?case-12 ] } } case ;
+
+: no-#s? ( string -- ? ) [ #= not ] all? ;
+: success-by-no-#s ( string -- n ) dup no-#s? [ { } pass-12 ] [ { } fail-12 ] if ;
+: enough-room? ( string lens -- ? )  [ length ] dip [ sum ] [ length 1 - ] bi + >= ;
+: 1solve-12-cached ( string lens -- n ) [ [ success-by-no-#s ] [ [ enough-room? ] [ process-next-char ] 2if-else-fail ] if-empty ] if-not-cached-12 ;
+
 : solve-12 ( string lens -- n ) { } >hashtable cache-12 set [ 1solve-12-cached ] 2curry bag-of sum ;
 : read-12 ( -- strings ) "12.txt" read-input ;
 : run-12-1 ( strings -- n ) [ prepare-12 solve-12 ] map-sum ;

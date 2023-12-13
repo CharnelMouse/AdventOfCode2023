@@ -464,42 +464,6 @@ USE: backtrack
 
 : prepare-12 ( string -- string lens ) split-words first2 "," split [ string>number ] map ;
 : expand-12 ( string lens -- string*5 lens*5 ) [ 5 swap <repetition> "?" join ] dip 5 swap <repetition> concat ;
-
-: 1solve-12 ( string lens -- n )
-  dup empty?
-  [ over [ CHAR: # = not ] all? must-be-true 2drop 1 ]
-  [
-    2dup [ length ] dip [ sum ] [ length 1 - ] bi + >= must-be-true
-    over first {
-      {
-        CHAR: .
-        [ [ [ CHAR: . = ] trim-head ] dip 1solve-12 ]
-      }
-      {
-        CHAR: #
-        [
-          2dup first head [ CHAR: . = not ] all? must-be-true
-          unclip swap [ tail ] dip
-          over ?first CHAR: # = not must-be-true
-          [ dup empty? [ rest ] unless ] dip
-          1solve-12
-        ]
-      }
-      {
-        CHAR: ?
-        [
-          ".#" amb
-          {
-            { CHAR: . [ [ rest ] dip 1solve-12 ] }
-            { CHAR: # [ [ rest CHAR: # prefix ] dip 1solve-12 ] }
-          } case
-        ]
-      }
-    } case
-  ]
-  if ;
-: solve-12-nocache ( string lens -- n ) [ 1solve-12 ] 2curry bag-of sum ;
-
 SYMBOL: cache-12
 : trim-.s-head ( string -- string' ) [ CHAR: . = ] trim-head ;
 : rest-if-nonempty ( string -- string' ) dup empty? [ rest ] unless ;
@@ -556,9 +520,7 @@ SYMBOL: cache-12
   ]
   if ;
 : solve-12 ( string lens -- n ) { } >hashtable cache-12 set [ 1solve-12-cached ] 2curry bag-of sum ;
-
 : read-12 ( -- strings ) "12.txt" read-input ;
-: run-12-1 ( strings -- n ) [ prepare-12 solve-12-nocache ] map-sum ;
-: run-12-2-nocache ( strings -- n ) [ prepare-12 expand-12 solve-12-nocache ] map-sum ;
+: run-12-1 ( strings -- n ) [ prepare-12 solve-12 ] map-sum ;
 : run-12-2 ( strings -- n ) [ prepare-12 expand-12 solve-12 ] map-sum ;
 : run-12 ( -- ) read-12 [ run-12-1 . ] [ run-12-2 . ] bi ;

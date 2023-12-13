@@ -304,6 +304,5 @@ int-tritest
 "?###???????? 3,2,1"
 }
 [ run-12-1 ] 21
-[ run-12-2-nocache ] 525152
 [ run-12-2 ] 525152
-int-tritest
+int-bitest

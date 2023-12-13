@@ -1,8 +1,10 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order sets grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors backtrack ;
+USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors backtrack namespaces ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
 FROM: sequences.extras => first= second= last= 3map-reduce index* ;
 FROM: match => ?rest ;
+FROM: math.combinatorics => nCk ;
+FROM: sets => intersect union ;
 IN: AOC2023
 
 ! Common words
@@ -460,63 +462,103 @@ USE: backtrack
 
 ! Day 12
 
-: prepline-12 ( string -- string-lens-pair ) split-words first2 "," split [ string>number ] map 2array ;
+: prepare-12 ( string -- string lens ) split-words first2 "," split [ string>number ] map ;
+: expand-12 ( string lens -- string*5 lens*5 ) [ 5 swap <repetition> "?" join ] dip 5 swap <repetition> concat ;
 
-: rest-if-head-empty ( seq -- seq' ) dup first empty? [ rest ] when ;
-: but-last-if-tail-empty ( seq -- seq' ) dup last empty? [ but-last ] when ;
+: 1solve-12 ( string lens -- n )
+  dup empty?
+  [ over [ CHAR: # = not ] all? must-be-true 2drop 1 ]
+  [
+    2dup [ length ] dip [ sum ] [ length 1 - ] bi + >= must-be-true
+    over first {
+      {
+        CHAR: .
+        [ [ [ CHAR: . = ] trim-head ] dip 1solve-12 ]
+      }
+      {
+        CHAR: #
+        [
+          2dup first head [ CHAR: . = not ] all? must-be-true
+          unclip swap [ tail ] dip
+          over ?first CHAR: # = not must-be-true
+          [ dup empty? [ rest ] unless ] dip
+          1solve-12
+        ]
+      }
+      {
+        CHAR: ?
+        [
+          ".#" amb
+          {
+            { CHAR: . [ [ rest ] dip 1solve-12 ] }
+            { CHAR: # [ [ rest CHAR: # prefix ] dip 1solve-12 ] }
+          } case
+        ]
+      }
+    } case
+  ]
+  if ;
+: solve-12-nocache ( string lens -- n ) [ 1solve-12 ] 2curry bag-of sum ;
 
-: add-to-start ( s1 s2 x -- s1' s2 ) swap [ suffix ] dip ;
-: add-to-end ( s1 s2 x -- s1 s2' ) prefix ;
-: add-str-to-start ( s1 s2 str -- s1' s2 ) swap [ append ] dip ;
-: add-str-to-end ( s1 s2 str -- s1 s2' ) prepend ;
-
-: trim-empty-start ( s1 s2 string-lens-pair -- s1' s2 string'-lens-pair ) first2 [ dup [ CHAR: . = not ] find [ ] [ drop dup length ] if cut [ add-str-to-start ] dip ] dip 2array ;
-: trim-empty-end ( s1 s2 string-lens-pair -- s1 s2' string'-lens-pair ) first2 [ dup [ CHAR: . =  not ] find-last [ 1 + ] [ drop 0 ] if cut swap [ add-str-to-end ] dip ] dip 2array   ;
-: trim-short-head ( s1 s2 string-lens-pair -- s1' s2 string'-lens-pair ) first2 2dup [ length ] dip first < [ [ cut [ length CHAR: . <string> add-to-start ] dip ] keep ] when 2array ;
-: trim-short-tail ( s1 s2 string-lens-pair -- s1 s2' string'-lens-pair ) first2 2dup [ length ] dip last < [ [ cut* swap [ length CHAR: . <string> add-to-end ] dip ] keep ] when 2array ;
-
-: fail-if-too-short ( string-lens-pair -- string-lens-pair ) [ first2 [ length ] dip dup empty? [ drop 0 ] [ [ sum ] [ length 1 [-] ] bi + ] if >= must-be-true ] keep ;
-
-: presolved-head? ( string lens -- ? ) first cut-slice [ [ CHAR: # = ] all? ] dip ?first CHAR: # = not and ;
-: presolved-tail? ( string lens -- ? ) last cut-slice* [ ?last CHAR: # = not ] dip [ CHAR: # = ] all? and ;
-: trim-presolved-head ( s1 s2 string lens -- s1' s2 string' lens' ) unclip swap [ cut dup ?first CHAR: # = [ fail ] when dup empty? [ rest ] unless ] dip [ length CHAR: # <string> add-str-to-start ] 2dip ;
-: trim-presolved-tail ( s1 s2 string lens -- s1 s2' string' lens' ) unclip-last swap [ cut* swap dup ?last CHAR: # = [ fail ] when dup empty? [ but-last ] unless ] dip [ length CHAR: # <string> add-str-to-end ] 2dip ;
-: trim-head-if-presolved ( s1 s2 string-lens-pair -- s1' s2 string'-lens'-pair ? ) first2 2dup presolved-head? [ [ trim-presolved-head ] when ] keep [ 2array ] dip ;
-: trim-tail-if-presolved ( s1 s2 string-lens-pair -- s1 s2' string'-lens'-pair ? ) first2 2dup presolved-tail? [ [ trim-presolved-tail ] when ] keep [ 2array ] dip ;
-
-: runon-head? ( string lens -- ? ) first cut-slice drop [ ?first CHAR: # = ] [ ?rest [ CHAR: . = not ] all? ] bi and ;
-: runon-tail? ( string lens -- ? ) last cut-slice* nip [ ?last CHAR: # = ] [ ?but-last [ CHAR: . = not ] all? ] bi and ;
-
-: trim-head-if-runon ( s1 s2 string-lens-pair -- s1' s2 string'-lens'-pair ? ) first2 2dup runon-head? [ [ trim-presolved-head ] when ] keep [ 2array ] dip ;
-: trim-tail-if-runon ( s1 s2 string-lens-pair -- s1 s2' string'-lens'-pair ? ) first2 2dup runon-tail? [ [ trim-presolved-tail ] when ] keep [ 2array ] dip ;
-
-! must start with ?
-: amb-first ( string -- string' ) rest ".#" amb prefix ;
-: amb-last ( string -- string' ) but-last ".#" amb suffix ;
-: amb-fill-head ( string-lens-pair -- string'-lens'-pair ? ) first2 over first CHAR: ? = [ [ amb-first ] dip 2array t ] [ 2array f ] if ;
-: amb-fill-tail ( string-lens-pair -- string'-lens'-pair ? ) first2 over last CHAR: ? = [ [ amb-last ] dip 2array t ] [ 2array f ] if ;
-
-: next-if-none-empty ( x quot: ( ...a x -- ...a x ) -- x ) [ dup [ empty? ] any? ] dip unless ; inline
-: next-if-second-none-empty ( ...a x y quot: ( ...a x y -- ...a x y ) -- ...a x y ) [ over [ empty? ] any? ] dip unless ; inline
-: with-dirty ( ...a ? quot: ( ...a -- ...a ? ) -- ...a ? ) dip or ; inline
-: iter-12-main ( string-lens-pair -- string ) [ "" "" ] dip t [ ] [
-    [ trim-empty-start ] next-if-none-empty
-    [ trim-empty-end ] next-if-none-empty
-    fail-if-too-short
-    f
-    [ [ trim-head-if-presolved ] with-dirty ] next-if-second-none-empty
-    [ [ trim-tail-if-presolved ] with-dirty ] next-if-second-none-empty
-    [ [ trim-head-if-runon ] with-dirty ] next-if-second-none-empty
-    [ [ trim-tail-if-runon ] with-dirty ] next-if-second-none-empty
-    [ [ t ] [ amb-fill-head ] if ] next-if-second-none-empty
-    [ [ t ] [ amb-fill-tail ] if ] next-if-second-none-empty
-    [ dup second empty? not ] dip and
-  ] while
-  [ [ first [ CHAR: # = ] any? not ] [ second empty? ] bi and must-be-true ] keep
-  first length CHAR: . <string> prepend append ;
-: iter-12 ( strips-lens-pair -- n ) dup [ empty? 1 0 ? ] map-sum { { 0 [ [ iter-12-main ] curry bag-of length ] } { 1 [ drop 0 ] } { 2 [ drop 1 ] } } case ;
-: 1d-griddle ( string -- n ) prepline-12 iter-12 ;
+SYMBOL: cache-12
+: trim-.s-head ( string -- string' ) [ CHAR: . = ] trim-head ;
+: rest-if-nonempty ( string -- string' ) dup empty? [ rest ] unless ;
+: #= ( x -- ? ) CHAR: # = ;
+: .= ( x -- ? ) CHAR: . = ;
+: cache-keep-12 ( string lens val -- val ) [ -rot 2array cache-12 get set-at ] keep ;
+: pass-12 ( string lens -- 1 ) 1 cache-keep-12 ;
+: fail-12 ( string lens -- 0 ) 0 cache-keep-12 ;
+: if-else-fail ( -- ) [ fail-12 ] if ; inline
+: 1solve-12-cached ( string lens -- n )
+  2dup 2array cache-12 get ?at
+  [ 2nip ]
+  [
+    drop
+    dup empty?
+    [ over [ #= not ] all? [ pass-12 ] if-else-fail ]
+    [
+      2dup [ length ] dip [ sum ] [ length 1 - ] bi + >=
+      [
+        over first {
+          {
+            CHAR: .
+            [ [ trim-.s-head ] dip 1solve-12-cached ]
+          }
+          {
+            CHAR: #
+            [
+              2dup first head [ .= not ] all?
+              [
+                2dup
+                unclip swap [ tail ] dip over ?first #= not
+                [ [ 2drop ] 2dip [ rest-if-nonempty ] dip 1solve-12-cached ]
+                [ 2drop fail-12 ]
+                if
+              ]
+              if-else-fail
+            ]
+          }
+          {
+            CHAR: ?
+            [
+              2dup
+              [ [ rest ] dip 1solve-12-cached ]
+              [ [ rest CHAR: # prefix ] dip 1solve-12-cached ]
+              2bi +
+              cache-keep-12
+            ]
+          }
+        } case
+      ]
+      if-else-fail
+    ]
+    if
+  ]
+  if ;
+: solve-12 ( string lens -- n ) { } >hashtable cache-12 set [ 1solve-12-cached ] 2curry bag-of sum ;
 
 : read-12 ( -- strings ) "12.txt" read-input ;
-: run-12-1 ( strings -- n ) [ 1d-griddle ] map-sum ;
-: run-12 ( -- ) read-12 run-12-1 . ;
+: run-12-1 ( strings -- n ) [ prepare-12 solve-12-nocache ] map-sum ;
+: run-12-2-nocache ( strings -- n ) [ prepare-12 expand-12 solve-12-nocache ] map-sum ;
+: run-12-2 ( strings -- n ) [ prepare-12 expand-12 solve-12 ] map-sum ;
+: run-12 ( -- ) read-12 [ run-12-1 . ] [ run-12-2 . ] bi ;

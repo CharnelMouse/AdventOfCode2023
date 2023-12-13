@@ -502,3 +502,14 @@ DEFER: 1solve-12-cached
 : run-12-1 ( strings -- n ) [ prepare-12 solve-12 ] map-sum ;
 : run-12-2 ( strings -- n ) [ prepare-12 expand-12 solve-12 ] map-sum ;
 : run-12 ( -- ) read-12 [ run-12-1 . ] [ run-12-2 . ] bi ;
+
+
+! Day 13
+
+: ?hline ( strings -- n/? ? ) flip [ unclip 1array 2array ] map [ dup [ [ first2 [ head? ] [ swap head? ] 2bi or ] all? ] [ first first empty? ] bi or ] [ [ first2 [ unclip ] dip swap prefix 2array ] map ] until [ first second length ] [ first first length ] bi 0 = [ drop f f ] [ t ] if ;
+: score-hline ( hline -- n ) 100 * ;
+: vline ( strings -- n ) [ unclip 1array 2array ] map [ dup [ first2 [ head? ] [ swap head? ] 2bi or ] all? ] [ [ first2 [ unclip ] dip swap prefix 2array ] map ] until first second length ;
+: score-vline ( vline -- n ) ;
+: score-reflection ( strings -- n ) dup ?hline [ nip score-hline ] [ drop vline score-vline ] if ;
+: read-13 ( -- strings ) "13.txt" read-input ;
+: run-13-1 ( strings -- n ) { "" } split [ score-reflection ] map-sum ;

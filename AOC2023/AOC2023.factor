@@ -13,7 +13,8 @@ IN: AOC2023
 
 ! Common words
 
-: read-input ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
+: read-txt ( path -- seq ) utf8 [ read-lines ] with-file-reader ;
+: read-input ( n -- seq ) number>string 2 CHAR: 0 pad-head ".txt" append read-txt ;
 : as-seq ( x -- seq ) 1array ;
 : replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
 : split-words-multspace ( seq -- seq ) split-words harvest ;
@@ -64,11 +65,10 @@ C: <state> state
 : to-num ( string -- n ) [ digit? ] [ find nip ] [ find-last nip ] 2bi 2array string>number ;
 : to-num2 ( string -- n ) [ first-match resolve 10 * ] [ last-match resolve ] bi + ;
 
-: read-01 ( -- seq ) "01.txt" read-input ;
 : run-01-1 ( seq -- n ) [ to-num ] map-sum ;
 : run-01-2 ( seq -- n ) [ to-num2 ] map-sum ;
 
-: run-01 ( -- ) read-01 [ run-01-1 . ] [ run-01-2 . ] bi ;
+: run-01 ( -- ) 1 read-input [ run-01-1 . ] [ run-01-2 . ] bi ;
 
 
 ! Day 2
@@ -84,10 +84,9 @@ C: <state> state
 : valid ( string bag -- ? ) [ min-bag ] dip [ <= ] 2all? ;
 : n-if-valid ( string n bag -- n ) swapd valid [ 1 + ] [ drop 0 ] if ;
 
-: read-02 ( -- seq ) "02.txt" read-input ;
 : run-02-1 ( seq -- n ) [ { 12 13 14 } n-if-valid ] map-index 0 [ + ] reduce ;
 : run-02-2 ( seq -- f ) [ min-bag bag-power ] map-sum ;
-: run-02 ( -- ) read-02 [ run-02-1 . ] [ run-02-2 . ] bi ;
+: run-02 ( -- ) 2 read-input [ run-02-1 . ] [ run-02-2 . ] bi ;
 
 
 ! Day 3 ( nb refers to numblock, a continguous digit position set that will make a number )
@@ -142,10 +141,9 @@ C: <pos> pos
 : gear-nb-pairs ( strings -- nb-pairs ) gear-nb-sets [ length 2 = ] filter ;
 : with-lookup ( strings quot -- object quot' ) [ num-lookup ] bi ; inline
 
-: read-03 ( -- strings ) "03.txt" read-input ;
 : run-03-1 ( strings -- n ) [ valid-nbs ] with-lookup map-sum ;
 : run-03-2 ( strings -- n ) [ gear-nb-pairs ] with-lookup [ map ] curry map [ product ] map-sum ;
-: run-03 ( -- ) read-03 [ run-03-1 . ] [ run-03-2 . ] bi ;
+: run-03 ( -- ) 3 read-input [ run-03-1 . ] [ run-03-2 . ] bi ;
 
 
 ! Day 4
@@ -162,14 +160,11 @@ C: <pos> pos
 : inc-slice ( n slice -- ) dup empty? [ 2drop ] [ [ swap [ + ] curry map ] keep set-slice ] if ;
 : stepstate ( slice n -- rest-slice' ) [ [ rest-slice ] [ first ] [ length 1 - ] tri ] dip min overd head-slice inc-slice ;
 
-: read-04 ( -- cards ) "04.txt" read-input ;
 : run-04-1 ( cards -- n ) [ card-value ] map-sum ;
 : run-04-2 ( cards -- n ) [ 1s ] [ [ card-matches ] map ] bi over [ stepstate ] reduce drop sum ;
-: run-04 ( -- ) read-04 [ run-04-1 . ] [ run-04-2 . ] bi ;
+: run-04 ( -- ) 4 read-input [ run-04-1 . ] [ run-04-2 . ] bi ;
 
 ! Day 5
-
-: read-05 ( -- strings ) "05.txt" read-input ;
 
 : lengthed-range ( start length -- range ) over + [a..b) ;
 : empty-range ( -- range ) T{ range { step 1 } } ;
@@ -217,12 +212,11 @@ C: <pos> pos
 : next-map-r ( rs maps -- rs rest-maps ) cut-paragraph [ apply-map-r ] dip ;
 : run-05-2 ( strings -- n ) cut-seed-ranges [ next-map-r ] while-nonempty drop firsts infimum ;
 
-: run-05 ( -- ) read-05 [ run-05-1 . ] [ run-05-2 . ] bi ;
+: run-05 ( -- ) 5 read-input [ run-05-1 . ] [ run-05-2 . ] bi ;
 
 
 ! Day 6
 
-: read-06 ( -- strings ) "06.txt" read-input ;
 : parse-06 ( strings -- times distances ) [ split-words-multspace rest [ string>number ] map ] map first2 ;
 : parse-06-single ( strings -- time distance ) [ split-words-multspace rest concat string>number ] map first2 ;
 : inv-parts ( time distance -- centre radius ) [ 2 / dup sq ] dip - sqrt ;
@@ -230,12 +224,11 @@ C: <pos> pos
 : button-times ( time distance -- n ) inv-parts open-members ;
 : run-06-1 ( strings -- n ) parse-06 [ button-times ] [ * ] 2map-reduce ;
 : run-06-2 ( strings -- n ) parse-06-single button-times ;
-: run-06 ( -- ) read-06 [ run-06-1 . ] [ run-06-2 . ] bi ;
+: run-06 ( -- ) 6 read-input [ run-06-1 . ] [ run-06-2 . ] bi ;
 
 
 ! Day 7
 
-: read-07 ( -- strings ) "07.txt" read-input ;
 : parse-07 ( strings -- pairs ) [ split-words first2 [ [ 1string ] { } map-as ] dip string>number 2array ] map ;
 : type2 ( hist -- type ) values 4 swap member? 6 5 ? ;
 : type3 ( hist -- type ) values 3 swap member? 4 3 ? ;
@@ -257,7 +250,7 @@ C: <pos> pos
 
 : run-07-1 ( strings -- n ) parse-07 [ ] [ ] sort-by-hand [ pair-value ] map-index sum ;
 : run-07-2 ( strings -- n ) parse-07 [ Js-to-best ] [ J-to-0 ] sort-by-hand [ pair-value ] map-index sum ;
-: run-07 ( -- ) read-07 [ run-07-1 . ] [ run-07-2 . ] bi ;
+: run-07 ( -- ) 7 read-input [ run-07-1 . ] [ run-07-2 . ] bi ;
 
 
 ! Day 8
@@ -292,7 +285,6 @@ USE: backtrack
   newmod xs ;
 : combine-congruences ( cong1 cong2 -- new-cong ) [ first2 ] bi@ crt-mod 2array ;
 
-: read-08 ( -- strings ) "08.txt" read-input ;
 : dir-to-index ( char -- n ) CHAR: L = 0 1 ? ;
 : parse-network ( strings -- network ) [ [ "(,)" member? ] reject split-words first4 [ drop ] 2dip 2array 2array ] map >hashtable ;
 : parse-08 ( strings -- directions network ) cut-paragraph [ first [ dir-to-index ] { 0 } map-as ] dip parse-network ;
@@ -341,18 +333,17 @@ USE: backtrack
   2dup paths
   -rot swap [ move-until-cycle ] curry curry map
   collapse-to-common-start check-early-end dup [ nip ] [ drop solve-cycles ] if + ;
-: run-08 ( -- ) read-08 [ run-08-1 . ] [ run-08-2 . ] bi ;
+: run-08 ( -- ) 8 read-input [ run-08-1 . ] [ run-08-2 . ] bi ;
 
 
 ! Day 9
 
-: read-09 ( -- seqs ) "09.txt" read-input [ parse-nums ] map ;
 : all-equal? ( seq -- ? ) [ first ] keep swap [ = ] curry all? ;
 : outer-nums ( seq -- pair ) dup all-equal? [ first dup 2array ] [ [ [ first ] [ last ] bi 2array ] [ 2 <clumps> [ first2 swap - ] map outer-nums { -1 1 } v* ] bi v+ ] if ;
 : process-09 ( seqs -- pair ) [ outer-nums ] [ v+ ] map-reduce ;
 : run-09-1 ( pair -- n ) second ;
 : run-09-2 ( pair -- n ) first ;
-: run-09 ( -- ) read-09 process-09 [ run-09-1 . ] [ run-09-2 . ] bi ;
+: run-09 ( -- ) 9 read-input [ parse-nums ] map process-09 [ run-09-1 . ] [ run-09-2 . ] bi ;
 
 
 ! Day 10
@@ -438,11 +429,10 @@ USE: backtrack
   [ halfturns accumulate-halfturns ] curry [ nonloop-weights ] 2bi
   [ * ] [ + ] 2map-reduce ;
 
-: read-10 ( -- strings ) "10.txt" read-input ;
 : prepare-10 ( strings -- loop map ) parse-10 [ find-loop ] keep dupd fix-start-pipe ;
 : run-10-1 ( loop map -- n ) drop length 2 / ;
 : run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] dip [ count-internal ] curry map-sum ;
-: run-10 ( -- ) read-10 prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;
+: run-10 ( -- ) 10 read-input prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;
 
 
 ! Day 11
@@ -454,12 +444,11 @@ USE: backtrack
 : weighted-1d-distance ( x y weights -- n ) [ [ min ] [ max ] 2bi ] dip <slice> sum ;
 : weighted-manhattan-distance ( pos pos weights -- n ) [ weighted-1d-distance ] [ + ] 3map-reduce ;
 
-: read-11 ( -- strings ) "11.txt" read-input ;
 : process-11 ( strings -- galaxies strings ) [ galaxies ] keep ;
 : run-11-n ( galaxies strings n -- n ) weights-11 [ weighted-manhattan-distance ] curry map-sum-unordered-pairs ;
 : run-11-1 ( galaxies strings -- n ) 2 run-11-n ;
 : run-11-2 ( galaxies strings -- n ) 1,000,000 run-11-n ;
-: run-11 ( -- ) read-11 process-11 [ run-11-1 . ] [ run-11-2 . ] 2bi ;
+: run-11 ( -- ) 11 read-input process-11 [ run-11-1 . ] [ run-11-2 . ] 2bi ;
 
 
 ! Day 12
@@ -500,10 +489,9 @@ DEFER: 1solve-12-cached
 : 1solve-12-cached ( string lens -- n ) [ [ success-by-no-#s ] [ [ enough-room? ] [ process-next-char ] 2if-else-fail ] if-empty ] if-not-cached-12 ;
 
 : solve-12 ( string lens -- n ) { } >hashtable cache-12 set [ 1solve-12-cached ] 2curry bag-of sum ;
-: read-12 ( -- strings ) "12.txt" read-input ;
 : run-12-1 ( strings -- n ) [ prepare-12 solve-12 ] map-sum ;
 : run-12-2 ( strings -- n ) [ prepare-12 expand-12 solve-12 ] map-sum ;
-: run-12 ( -- ) read-12 [ run-12-1 . ] [ run-12-2 . ] bi ;
+: run-12 ( -- ) 12 read-input [ run-12-1 . ] [ run-12-2 . ] bi ;
 
 
 ! Day 13
@@ -530,7 +518,6 @@ DEFER: 1solve-12-cached
 : smudge ( hdists vdists -- n hline? ) find-best [ nip f ] [ drop find-best drop t ] if ;
 : score-smudged-reflection ( n hline? -- n ) [ 100 * ] when ;
 
-: read-13 ( -- strings ) "13.txt" read-input ;
 : run-13-1 ( strings -- n ) { "" } split [ score-reflection ] map-sum ;
 : run-13-2 ( string -- n ) { "" } split [ smudge-distances smudge score-smudged-reflection ] map-sum ;
-: run-13 ( -- ) read-13 [ run-13-1 . ] [ run-13-2 . ] bi ;
+: run-13 ( -- ) 13 read-input [ run-13-1 . ] [ run-13-2 . ] bi ;

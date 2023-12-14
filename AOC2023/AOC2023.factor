@@ -17,8 +17,6 @@ IN: AOC2023
 : parse-nums ( string -- ns ) split-words [ string>number ] map ;
 : firsts ( seqs -- seq ) [ first ] map ;
 : seconds ( seqs -- seq ) [ second ] map ;
-: pmin ( seq1 seq2 -- newseq ) [ min ] 2map ;
-: pmax ( seq1 seq2 -- newseq ) [ max ] 2map ;
 : partition-by ( seq quot: ( elt -- key ) -- seqs ) collect-by >alist ; inline
 : manhattan-distance ( pos pos -- n ) [ - abs ] 2map sum ;
 : unordered-pairs ( seq -- pairs ) dup length <iota> dup [ 2array ] cartesian-map concat [ first2 < ] filter [ [ swap nth ] with map ] with map ;
@@ -78,7 +76,7 @@ C: <state> state
 : inc-bag ( bag seq -- bag' ) [ first string>number ] [ second colour>n ] bi -rot max-nth ;
 : to-bag ( string -- bag ) "," split [ rest split-words ] map empty-bag [ inc-bag ] reduce ;
 : to-bags ( string -- seq ) ":;" split rest [ to-bag ] map ;
-: min-bag ( string -- bag ) to-bags empty-bag [ pmax ] reduce ;
+: min-bag ( string -- bag ) to-bags empty-bag [ vmax ] reduce ;
 : valid ( string bag -- ? ) [ min-bag ] dip [ <= ] 2all? ;
 : n-if-valid ( string n bag -- n ) swapd valid [ 1 + ] [ drop 0 ] if ;
 
@@ -412,7 +410,7 @@ USE: backtrack
 : get-start-pipe ( loop -- char ) [ [ second ] [ first ] bi v- ] [ [ last ] [ first ] bi v- ] bi dirs-to-pipe ;
 : fix-start-pipe ( loop map -- map' ) [ [ get-start-pipe ] [ first ] bi ] dip ?set-at ;
 
-: loop-bounds ( loop -- corners ) [ unclip [ pmin ] reduce ] [ unclip [ pmax ] reduce ] bi 2array ;
+: loop-bounds ( loop -- corners ) [ unclip [ vmin ] reduce ] [ unclip [ vmax ] reduce ] bi 2array ;
 
 : partition-pipes-by-row ( loop -- row-cols-pairs ) [ second ] partition-by [ firsts sort ] assoc-map ;
 

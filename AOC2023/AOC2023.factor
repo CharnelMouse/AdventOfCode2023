@@ -1,4 +1,8 @@
-USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors backtrack namespaces ;
+USING: accessors arrays assocs backtrack combinators
+compiler.utilities grouping hashtables io io.encodings.utf8
+io.files kernel math math.functions math.order math.parser
+math.vectors namespaces prettyprint quotations ranges regexp
+sequences sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
 FROM: sequences.extras => first= second= last= 3map-reduce index* 2map-sum ;

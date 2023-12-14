@@ -327,3 +327,69 @@ int-bitest
 [ run-13-1 ] 405
 [ run-13-2 ] 400
 int-bitest
+
+
+! tests for real inputs, delete if using different ones
+
+1 read-input
+[ run-01-1 ] 54940
+[ run-01-2 ] 54208
+int-bitest
+
+2 read-input
+[ run-02-1 ] 2348
+[ run-02-2 ] 76008
+int-bitest
+
+3 read-input
+[ run-03-1 ] 537732
+[ run-03-2 ] 84883664
+int-bitest
+
+4 read-input
+[ run-04-1 ] 21919
+[ run-04-2 ] 9881048
+int-bitest
+
+5 read-input
+[ run-05-1 ] 107430936
+[ run-05-2 ] 23738616
+int-bitest
+
+6 read-input
+[ run-06-1 ] 861300
+[ run-06-2 ] 28101347
+int-bitest
+
+7 read-input
+[ run-07-1 ] 251058093
+[ run-07-2 ] 249781879
+int-bitest
+
+8 read-input
+[ run-08-1 ] 14429
+[ run-08-2 ] 10921547990923
+int-bitest
+
+9 read-input [ parse-nums ] map process-09
+[ run-09-1 ] 1806615041
+[ run-09-2 ] 1211
+int-bitest
+
+10 read-input prepare-10 2dup
+[ run-10-1 ] 2curry 6640 int-test
+[ run-10-2 ] 2curry 411 int-test
+
+11 read-input process-11 2dup
+[ run-11-1 ] 2curry 9918828 int-test
+[ run-11-2 ] 2curry 692506533832 int-test
+
+12 read-input
+[ run-12-1 ] 7344
+[ run-12-2 ] 1088006519007
+int-bitest
+
+13 read-input
+[ run-13-1 ] 31877
+[ run-13-2 ] 42996
+int-bitest

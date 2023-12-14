@@ -507,9 +507,10 @@ DEFER: 1solve-12-cached
 ! Day 13
 
 : init-line ( seq -- pair ) unclip "" swap prefix 2array ;
-: mirror? ( pair -- ? ) first2 [ head? ] [ swap head? ] 2bi or ;
 : line-end? ( pair -- ? ) first empty? ;
 : move-line ( pair -- pair' ) first2 [ unclip ] dip swap prefix 2array ;
+
+: mirror? ( pair -- ? ) first2 [ head? ] [ swap head? ] 2bi or ;
 : mirror-pos ( seq -- n ) first second length ;
 : ?mirror-pos ( seq -- n/? ? ) [ first second length ] [ first first length ] bi 0 = [ drop f f ] [ t ] if ;
 : ?hline ( strings -- n/? ? ) flip [ init-line ] map [ dup [ [ mirror? ] [ line-end? ] bi or ] all? ] [ [ move-line ] map ] until ?mirror-pos ;
@@ -518,16 +519,16 @@ DEFER: 1solve-12-cached
 : score-vline ( vline -- n ) ;
 : score-reflection ( strings -- n ) dup ?hline [ nip score-hline ] [ drop vline score-vline ] if ;
 
-: smudge-distance ( pair -- n ) first2 2dup min-length [ [ head ] curry bi@ [ = 1 0 ? ] 2map-sum ] keep swap - ;
-: tally-mirror ( bits pair -- bits' ) smudge-distance suffix ;
-: tally-line-reflect ( string -- bits ) init-line { } swap [ tally-mirror ] keep [ dup line-end? ] [ move-line [ tally-mirror ] keep ] until drop ;
-: tally-reflect ( strings -- tallies ) [ tally-line-reflect ] [ v+ ] map-reduce ;
+: mirror-line-hdist ( pair -- n ) first2 2dup min-length [ [ head ] curry bi@ [ = 1 0 ? ] 2map-sum ] keep swap - ;
+: log-mirror-line-hdist ( bits pair -- bits' ) mirror-line-hdist suffix ;
+: smudge-line-hdists ( string -- dists ) init-line { } swap [ log-mirror-line-hdist ] keep [ dup line-end? ] [ move-line [ log-mirror-line-hdist ] keep ] until drop ;
+: smudge-hdists ( strings -- dists ) [ smudge-line-hdists ] [ v+ ] map-reduce ;
 : find-best ( tallies -- n/f f ) [ 1 = ] find-last [ dup [ 1 + ] when ] dip ;
-: tally-reflects ( strings -- htallies vtallies ) [ flip tally-reflect ] [ tally-reflect ] bi ;
-: smudge ( htallies vtallies -- n hline? ) find-best [ nip f ] [ drop find-best drop t ] if ;
+: smudge-distances ( strings -- hdists vdists ) [ flip smudge-hdists ] [ smudge-hdists ] bi ;
+: smudge ( hdists vdists -- n hline? ) find-best [ nip f ] [ drop find-best drop t ] if ;
 : score-smudged-reflection ( n hline? -- n ) [ 100 * ] when ;
 
 : read-13 ( -- strings ) "13.txt" read-input ;
 : run-13-1 ( strings -- n ) { "" } split [ score-reflection ] map-sum ;
-: run-13-2 ( string -- n ) { "" } split [ tally-reflects smudge score-smudged-reflection ] map-sum ;
+: run-13-2 ( string -- n ) { "" } split [ smudge-distances smudge score-smudged-reflection ] map-sum ;
 : run-13 ( -- ) read-13 [ run-13-1 . ] [ run-13-2 . ] bi ;

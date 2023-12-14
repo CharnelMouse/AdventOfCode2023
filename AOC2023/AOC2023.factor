@@ -1,7 +1,7 @@
 USING: io.encodings.utf8 io.files io unicode sequences strings kernel math.parser ranges quotations arrays combinators regexp math prettyprint accessors splitting math.order grouping math.functions grouping.extras assocs sorting hashtables compiler.utilities math.vectors vectors backtrack namespaces ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
-FROM: sequences.extras => first= second= last= 3map-reduce index* ;
+FROM: sequences.extras => first= second= last= 3map-reduce index* 2map-sum ;
 FROM: match => ?rest ;
 FROM: math.combinatorics => nCk ;
 FROM: sets => intersect union ;
@@ -506,10 +506,28 @@ DEFER: 1solve-12-cached
 
 ! Day 13
 
-: ?hline ( strings -- n/? ? ) flip [ unclip 1array 2array ] map [ dup [ [ first2 [ head? ] [ swap head? ] 2bi or ] all? ] [ first first empty? ] bi or ] [ [ first2 [ unclip ] dip swap prefix 2array ] map ] until [ first second length ] [ first first length ] bi 0 = [ drop f f ] [ t ] if ;
+: init-line ( seq -- pair ) unclip "" swap prefix 2array ;
+: mirror? ( pair -- ? ) first2 [ head? ] [ swap head? ] 2bi or ;
+: line-end? ( pair -- ? ) first empty? ;
+: move-line ( pair -- pair' ) first2 [ unclip ] dip swap prefix 2array ;
+: mirror-pos ( seq -- n ) first second length ;
+: ?mirror-pos ( seq -- n/? ? ) [ first second length ] [ first first length ] bi 0 = [ drop f f ] [ t ] if ;
+: ?hline ( strings -- n/? ? ) flip [ init-line ] map [ dup [ [ mirror? ] [ line-end? ] bi or ] all? ] [ [ move-line ] map ] until ?mirror-pos ;
 : score-hline ( hline -- n ) 100 * ;
-: vline ( strings -- n ) [ unclip 1array 2array ] map [ dup [ first2 [ head? ] [ swap head? ] 2bi or ] all? ] [ [ first2 [ unclip ] dip swap prefix 2array ] map ] until first second length ;
+: vline ( strings -- n ) [ init-line ] map [ dup [ mirror? ] all? ] [ [ move-line ] map ] until mirror-pos ;
 : score-vline ( vline -- n ) ;
 : score-reflection ( strings -- n ) dup ?hline [ nip score-hline ] [ drop vline score-vline ] if ;
+
+: smudge-distance ( pair -- n ) first2 2dup min-length [ [ head ] curry bi@ [ = 1 0 ? ] 2map-sum ] keep swap - ;
+: tally-mirror ( bits pair -- bits' ) smudge-distance suffix ;
+: tally-line-reflect ( string -- bits ) init-line { } swap [ tally-mirror ] keep [ dup line-end? ] [ move-line [ tally-mirror ] keep ] until drop ;
+: tally-reflect ( strings -- tallies ) [ tally-line-reflect ] [ v+ ] map-reduce ;
+: find-best ( tallies -- n/f f ) [ 1 = ] find-last [ dup [ 1 + ] when ] dip ;
+: tally-reflects ( strings -- htallies vtallies ) [ flip tally-reflect ] [ tally-reflect ] bi ;
+: smudge ( htallies vtallies -- n hline? ) find-best [ nip f ] [ drop find-best drop t ] if ;
+: score-smudged-reflection ( n hline? -- n ) [ 100 * ] when ;
+
 : read-13 ( -- strings ) "13.txt" read-input ;
 : run-13-1 ( strings -- n ) { "" } split [ score-reflection ] map-sum ;
+: run-13-2 ( string -- n ) { "" } split [ tally-reflects smudge score-smudged-reflection ] map-sum ;
+: run-13 ( -- ) read-13 [ run-13-1 . ] [ run-13-2 . ] bi ;

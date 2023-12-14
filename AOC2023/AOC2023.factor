@@ -5,7 +5,7 @@ math.vectors namespaces prettyprint quotations ranges regexp
 sequences sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
-FROM: sequences.extras => first= second= last= 3map-reduce index* 2map-sum ;
+FROM: sequences.extras => first= second= last= 3map-reduce index* 2map-sum exchange-subseq ;
 FROM: match => ?rest ;
 FROM: math.combinatorics => nCk ;
 FROM: sets => intersect union ;
@@ -521,3 +521,26 @@ DEFER: 1solve-12-cached
 : run-13-1 ( strings -- n ) { "" } split [ score-reflection ] map-sum ;
 : run-13-2 ( string -- n ) { "" } split [ smudge-distances smudge score-smudged-reflection ] map-sum ;
 : run-13 ( -- ) 13 read-input [ run-13-1 . ] [ run-13-2 . ] bi ;
+
+
+! Day 14
+
+: O= ( x -- ? ) CHAR: O = ;
+: if-else-drop ( ..a x ? quot: ( ..a x -- ..a ) -- ..a ) [ drop ] if ; inline
+: find-next-. ( seq from -- seq i elt ) over dup empty? [ 2drop f f ] [ [ .= ] find-from ] if ;
+: find-next-non. ( seq from -- i elt ) swap [ .= not ] find-from ;
+: find-O-end ( seq from -- i elt ) swap [ O= not ] find-from ;
+: min-difference ( ind1 ind2 ind3 -- n ) [ [ swap - ] keep ] dip swap - min ;
+:: swap-.s-with-Os ( seq .-from O-from -- seq' new-.-from )
+  seq O-from find-O-end [ drop seq length ] unless :> O-after
+  .-from O-from O-after min-difference :> len
+  len .-from O-from seq exchange-subseq
+  seq .-from len +
+  ;
+: swap-.s-with-Os-if-next ( seq .-from -- seq' new-.-from/first-non./f ) 2dup find-next-non. O= [ swap-.s-with-Os ] [ nip ] if ;
+: 1tilt-west ( string -- string' ) 0 [ dup [ find-next-. ] [ f ] if ] [ swap-.s-with-Os-if-next ] while drop ;
+: tilt-west ( strings -- strings' ) [ 1tilt-west ] map ;
+: tilt-north ( strings -- strings' ) flip tilt-west flip ;
+: north-load ( strings -- n ) flip [ reverse [ CHAR: O = ] indices-where [ 1 + ] map-sum ] map-sum ;
+: run-14-1 ( strings -- n ) tilt-north north-load ;
+: run-14 ( -- ) 14 read-input run-14-1 . ;

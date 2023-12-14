@@ -328,6 +328,23 @@ int-bitest
 [ run-13-2 ] 400
 int-bitest
 
+[
+{
+"O....#...."
+"O.OO#....#"
+".....##..."
+"OO.#O....O"
+".O.....O#."
+"O.#..O.#.#"
+"..O..#O..O"
+".......O.."
+"#....###.."
+"#OO..#...."
+}
+run-14-1
+]
+136
+int-test
 
 ! tests for real inputs, delete if using different ones
 

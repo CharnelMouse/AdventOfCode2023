@@ -5,7 +5,9 @@ math.vectors namespaces prettyprint quotations ranges regexp
 sequences sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: multiline => /* ;
-FROM: sequences.extras => first= second= last= 3map-reduce index* 2map-sum exchange-subseq ;
+FROM: sequences.extras =>
+  first= second= last= 3map-reduce index* last-index* 2map-sum
+  exchange-subseq ;
 FROM: match => ?rest ;
 FROM: math.combinatorics => nCk ;
 FROM: sets => intersect union ;
@@ -553,7 +555,7 @@ SYMBOL: cache-14
 : tilt-south ( strings -- strings' ) flip tilt-east flip ;
 : cycle ( strings -- strings' ) tilt-north tilt-west tilt-south tilt-east ;
 
-: from-last ( seq el -- seq' ) dupd [ = ] curry find-last drop tail ;
+: from-last ( seq el -- seq' ) dupd last-index* tail ;
 : end-or-repeat? ( n strings -- ? ) [ 1bil = ] dip cache-14 get member? or ;
 : cycle-until-finished-or-repeat ( strings -- n strings' ) reset-cache-14 0 swap [ 2dup end-or-repeat? ] [ dup suffix-cache-14 cycle [ 1 + ] dip ] until ;
 : skip-rest-cycles ( n strings -- strings' ) [ 1bil swap - cache-14 get ] dip from-last [ length mod ] keep nth ;
@@ -578,7 +580,7 @@ SYMBOL: cache-14
 : HASHMAP-step ( boxes string -- boxes' ) parse-step CHAR: = = [ rot [ add-to-box ] keep ] [ nip swap [ remove-from-box ] keep ] if ;
 
 : HASHMAP ( strings -- assoc ) 0 <hashtable> [ HASHMAP-step ] reduce >alist ;
-: box-focus ( key-val -- n ) first2 [ 1 + ] dip [ length [1..b] ] [ [ second ] map ] bi v* sum * ;
+: box-focus ( key-val -- n ) first2 [ 1 + ] dip [ length [1..b] ] [ seconds ] bi v* sum * ;
 
 : run-15-1 ( string -- n ) "," split [ HASH ] map-sum ;
 : run-15-2 ( string -- n ) "," split HASHMAP [ box-focus ] map-sum ;

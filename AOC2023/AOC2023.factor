@@ -1,9 +1,8 @@
-USING: accessors arrays assocs backtrack combinators
-compiler.utilities grouping hashtables io io.encodings.utf8
-io.files kernel math math.functions math.order math.parser
-math.vectors namespaces prettyprint quotations ranges regexp
-sequences sequences.extras sorting splitting strings unicode
-vectors ;
+USING: accessors arrays assocs combinators compiler.utilities
+grouping hashtables io io.encodings.utf8 io.files kernel math
+math.functions math.order math.parser math.vectors namespaces
+prettyprint quotations ranges regexp sequences sequences.extras
+sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: sets => intersect union ;
 IN: AOC2023
@@ -482,7 +481,7 @@ DEFER: 1solve-12-cached
 : enough-room? ( string lens -- ? )  [ length ] dip [ sum ] [ length 1 - ] bi + >= ;
 : 1solve-12-cached ( string lens -- n ) [ [ success-by-no-#s ] [ [ enough-room? ] [ process-next-char ] 2if-else-fail ] if-empty ] if-not-cached-12 ;
 
-: solve-12 ( string lens -- n ) { } >hashtable cache-12 set [ 1solve-12-cached ] 2curry bag-of sum ;
+: solve-12 ( string lens -- n ) { } >hashtable cache-12 set 1solve-12-cached ;
 : run-12-1 ( strings -- n ) [ prepare-12 solve-12 ] map-sum ;
 : run-12-2 ( strings -- n ) [ prepare-12 expand-12 solve-12 ] map-sum ;
 : run-12 ( -- ) 12 read-input [ run-12-1 . ] [ run-12-2 . ] bi ;

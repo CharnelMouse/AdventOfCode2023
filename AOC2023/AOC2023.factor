@@ -31,6 +31,9 @@ IN: AOC2023
 : with-indices ( seq -- seq ) [ 2array ] { } map-index-as ;
 : indices-where ( seq quot: ( el -- ? ) -- ns ) [ with-indices ] dip [ first ] prepose filter seconds ; inline
 : ?but-last ( seq -- headseq/f ) [ f ] [ but-last ] if-empty ;
+: #= ( x -- ? ) CHAR: # = ;
+: .= ( x -- ? ) CHAR: . = ;
+: O= ( x -- ? ) CHAR: O = ;
 
 
 ! Day 1
@@ -460,8 +463,6 @@ SYMBOL: cache-12
 : expand-12 ( string lens -- string*5 lens*5 ) [ 5 swap <repetition> "?" join ] dip 5 swap <repetition> concat ;
 : trim-.s-head ( string -- string' ) [ CHAR: . = ] trim-head ;
 : rest-if-nonempty ( string -- string' ) dup empty? [ rest ] unless ;
-: #= ( x -- ? ) CHAR: # = ;
-: .= ( x -- ? ) CHAR: . = ;
 : cache-keep-12 ( val string lens -- val ) [ dup ] 2dip 2array cache-12 get set-at ;
 : pass-12 ( string lens -- 1 ) [ 1 ] 2dip cache-keep-12 ;
 : fail-12 ( string lens -- 0 ) [ 0 ] 2dip cache-keep-12 ;
@@ -524,30 +525,41 @@ DEFER: 1solve-12-cached
 
 
 ! Day 14
+! half the time is spent
+! writing more direct versions of tilt-N/E/S instead of
+! routing everything through tilt-W would probably speed things
+! up a lot
 
+CONSTANT: 1bil 1,000,000,000
 SYMBOL: cache-14
-: prefix-cache-14 ( x -- x ) [ [ cache-14 get ] dip suffix cache-14 set ] keep ;
-: O= ( x -- ? ) CHAR: O = ;
-: if-else-drop ( ..a x ? quot: ( ..a x -- ..a ) -- ..a ) [ drop ] if ; inline
-: find-next-. ( seq from -- seq i elt ) over dup empty? [ 2drop f f ] [ [ .= ] find-from ] if ;
-: find-next-non. ( seq from -- i elt ) swap [ .= not ] find-from ;
-: find-O-end ( seq from -- i elt ) swap [ O= not ] find-from ;
+: reset-cache-14 ( -- ) { } cache-14 set ;
+: suffix-cache-14 ( x -- ) [ cache-14 get ] dip suffix cache-14 set ;
+
+: find-next-. ( from seq -- seq i elt ) tuck dup empty? [ 2drop f f ] [ [ .= ] find-from ] if ;
+: find-next-non. ( from seq -- i elt ) [ .= not ] find-from ;
+: find-O-end ( from seq -- i elt ) [ O= not ] find-from ;
+
 : min-difference ( ind1 ind2 ind3 -- n ) [ [ swap - ] keep ] dip swap - min ;
-:: swap-.s-with-Os ( seq .-from O-from -- seq' new-.-from )
-  seq O-from find-O-end [ drop seq length ] unless :> O-after
-  .-from O-from O-after min-difference :> len
-  len .-from O-from seq exchange-subseq
-  seq .-from len +
-  ;
-: swap-.s-with-Os-if-next ( seq .-from -- seq' new-.-from/first-non./f ) 2dup find-next-non. O= [ swap-.s-with-Os ] [ nip ] if ;
-: 1tilt-west ( string -- string' ) 0 [ dup [ find-next-. ] [ f ] if ] [ swap-.s-with-Os-if-next ] while drop ;
+:: swap-.s-with-Os ( .-from O-from seq -- seq' new-.-from )
+  O-from seq find-O-end [ drop seq length ] unless :> O-after
+  .-from O-from O-after min-difference
+  .-from [ O-from seq [ exchange-subseq ] keep ] [ + ] 2bi ;
+: swap-.s-with-Os-if-next ( .-from seq -- seq' new-from/f ) 2dup find-next-non. swapd O= [ swap-.s-with-Os ] [ [ drop ] 2dip swap ] if ;
+: 1tilt-west ( string -- string' ) 0 [ dup [ swap find-next-. ] [ f ] if ] [ swap swap-.s-with-Os-if-next ] while drop ;
+
 : tilt-west ( strings -- strings' ) [ 1tilt-west ] map ;
 : tilt-north ( strings -- strings' ) flip tilt-west flip ;
 : tilt-east ( strings -- strings' ) [ reverse ] map tilt-west [ reverse ] map ;
 : tilt-south ( strings -- strings' ) flip tilt-east flip ;
 : cycle ( strings -- strings' ) tilt-north tilt-west tilt-south tilt-east ;
-: skip-rest-cycles ( n strings -- strings' ) [ 1,000,000,000 swap - cache-14 get dup ] dip [ = ] curry find-last drop tail [ length mod ] keep nth ;
+
+: from-last ( seq el -- seq' ) dupd [ = ] curry find-last drop tail ;
+: end-or-repeat? ( n strings -- ? ) [ 1bil = ] dip cache-14 get member? or ;
+: cycle-until-finished-or-repeat ( strings -- n strings' ) reset-cache-14 0 swap [ 2dup end-or-repeat? ] [ dup suffix-cache-14 cycle [ 1 + ] dip ] until ;
+: skip-rest-cycles ( n strings -- strings' ) [ 1bil swap - cache-14 get ] dip from-last [ length mod ] keep nth ;
+
 : north-load ( strings -- n ) flip [ reverse [ CHAR: O = ] indices-where [ 1 + ] map-sum ] map-sum ;
+
 : run-14-1 ( strings -- n ) tilt-north north-load ;
-: run-14-2 ( strings -- n ) { } cache-14 set 0 swap [ over 1,000,000,000 = over cache-14 get member? or ] [ prefix-cache-14 cycle [ 1 + ] dip ] until skip-rest-cycles north-load ;
+: run-14-2 ( strings -- n ) cycle-until-finished-or-repeat skip-rest-cycles north-load ;
 : run-14 ( -- ) 14 read-input [ run-14-1 . ] [ run-14-2 . ] bi ;

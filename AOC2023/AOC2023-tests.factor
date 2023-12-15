@@ -408,3 +408,8 @@ int-bitest
 [ run-13-1 ] 31877
 [ run-13-2 ] 42996
 int-bitest
+
+14 read-input
+[ run-14-1 ] 103614
+[ run-14-2 ] 83790
+int-bitest

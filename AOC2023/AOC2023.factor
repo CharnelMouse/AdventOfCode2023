@@ -568,13 +568,13 @@ SYMBOL: cache-14
 ! Day 15
 
 : HASH ( string -- n ) 0 [ + 17 * 256 mod ] reduce ;
-:: add-to-box ( label-lens boxes -- ) label-lens first HASH :> box box boxes at dup [ drop { } ] unless dup label-lens first swap at [ label-lens swap [ first2 swap ] dip [ set-at ] keep box boxes set-at ] [ label-lens suffix box boxes set-at ] if ;
-:: remove-from-box ( label boxes -- ) label HASH :> box box boxes at dup [ label [ nip = not ] curry assoc-filter box boxes set-at ] [ drop ] if ;
-:: HASHMAP-step ( boxes string -- boxes' )
-  string dup [ "=-" member? ] find drop dup 1 + 2array split-indices first3 dup [ string>number ] when :> ( label op lens )
-  op { { "=" [ label lens 2array boxes add-to-box ] } { "-" [ label boxes remove-from-box ] } } case
-  boxes
-;
+: create-box ( box boxes -- val ) 0 <vector> [ -rot set-at ] keep ;
+: get-box ( label boxes -- box ) [ HASH ] dip at ;
+: get-or-create-box ( label boxes -- box ) [ HASH ] dip 2dup at dup [ 2nip ] [ drop create-box ] if ;
+: add-to-box ( lens label boxes -- ) dupd get-or-create-box set-at ;
+: remove-from-box ( label boxes -- ) dupd get-box dup [ delete-at ] [ 2drop ] if ;
+: parse-step ( string -- lens/f label op ) dup [ "=-" member? ] find [ [ 1 + tail string>number ] [ head ] 2bi ] dip ;
+: HASHMAP-step ( boxes string -- boxes' ) parse-step CHAR: = = [ rot [ add-to-box ] keep ] [ nip swap [ remove-from-box ] keep ] if ;
 : HASHMAP ( strings -- assoc ) 0 <hashtable> [ HASHMAP-step ] reduce >alist ;
 : box-focus ( key-val -- n ) first2 [ 1 + ] dip [ length [1..b] ] [ [ second ] map ] bi v* sum * ;
 

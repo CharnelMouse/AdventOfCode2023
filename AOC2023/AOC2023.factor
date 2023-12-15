@@ -563,3 +563,10 @@ SYMBOL: cache-14
 : run-14-1 ( strings -- n ) tilt-north north-load ;
 : run-14-2 ( strings -- n ) cycle-until-finished-or-repeat skip-rest-cycles north-load ;
 : run-14 ( -- ) 14 read-input [ run-14-1 . ] [ run-14-2 . ] bi ;
+
+
+! Day 15
+
+: HASH ( string -- n ) 0 [ + 17 * 256 mod ] reduce ;
+: run-15-1 ( string -- n ) "," split [ HASH ] map-sum ;
+: run-15 ( -- ) 15 read-input first run-15-1 . ;

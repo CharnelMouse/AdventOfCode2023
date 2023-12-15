@@ -493,13 +493,14 @@ DEFER: 1solve-12-cached
 : init-line ( seq -- pair ) unclip "" swap prefix 2array ;
 : line-end? ( pair -- ? ) first empty? ;
 : move-line ( pair -- pair' ) first2 [ unclip ] dip swap prefix 2array ;
+: move-lines ( pairs -- pairs' ) [ move-line ] map ;
 
 : mirror? ( pair -- ? ) first2 [ head? ] [ swap head? ] 2bi or ;
 : mirror-pos ( seq -- n ) first second length ;
 : ?mirror-pos ( seq -- n/? ? ) [ first second length ] [ first first length ] bi 0 = [ drop f f ] [ t ] if ;
-: ?hline ( strings -- n/? ? ) flip [ init-line ] map [ dup [ [ mirror? ] [ line-end? ] bi or ] all? ] [ [ move-line ] map ] until ?mirror-pos ;
+: ?hline ( strings -- n/? ? ) flip [ init-line ] map [ dup [ [ mirror? ] [ line-end? ] bi or ] all? ] [ move-lines ] until ?mirror-pos ;
 : score-hline ( hline -- n ) 100 * ;
-: vline ( strings -- n ) [ init-line ] map [ dup [ mirror? ] all? ] [ [ move-line ] map ] until mirror-pos ;
+: vline ( strings -- n ) [ init-line ] map [ dup [ mirror? ] all? ] [ move-lines ] until mirror-pos ;
 : score-vline ( vline -- n ) ;
 : score-reflection ( strings -- n ) dup ?hline [ nip score-hline ] [ drop vline score-vline ] if ;
 

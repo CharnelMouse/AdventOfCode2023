@@ -525,6 +525,8 @@ DEFER: 1solve-12-cached
 
 ! Day 14
 
+SYMBOL: cache-14
+: prefix-cache-14 ( x -- x ) [ [ cache-14 get ] dip suffix cache-14 set ] keep ;
 : O= ( x -- ? ) CHAR: O = ;
 : if-else-drop ( ..a x ? quot: ( ..a x -- ..a ) -- ..a ) [ drop ] if ; inline
 : find-next-. ( seq from -- seq i elt ) over dup empty? [ 2drop f f ] [ [ .= ] find-from ] if ;
@@ -541,6 +543,11 @@ DEFER: 1solve-12-cached
 : 1tilt-west ( string -- string' ) 0 [ dup [ find-next-. ] [ f ] if ] [ swap-.s-with-Os-if-next ] while drop ;
 : tilt-west ( strings -- strings' ) [ 1tilt-west ] map ;
 : tilt-north ( strings -- strings' ) flip tilt-west flip ;
+: tilt-east ( strings -- strings' ) [ reverse ] map tilt-west [ reverse ] map ;
+: tilt-south ( strings -- strings' ) flip tilt-east flip ;
+: cycle ( strings -- strings' ) tilt-north tilt-west tilt-south tilt-east ;
+: skip-rest-cycles ( n strings -- strings' ) [ 1,000,000,000 swap - cache-14 get dup ] dip [ = ] curry find-last drop tail [ length mod ] keep nth ;
 : north-load ( strings -- n ) flip [ reverse [ CHAR: O = ] indices-where [ 1 + ] map-sum ] map-sum ;
 : run-14-1 ( strings -- n ) tilt-north north-load ;
-: run-14 ( -- ) 14 read-input run-14-1 . ;
+: run-14-2 ( strings -- n ) { } cache-14 set 0 swap [ over 1,000,000,000 = over cache-14 get member? or ] [ prefix-cache-14 cycle [ 1 + ] dip ] until skip-rest-cycles north-load ;
+: run-14 ( -- ) 14 read-input [ run-14-1 . ] [ run-14-2 . ] bi ;

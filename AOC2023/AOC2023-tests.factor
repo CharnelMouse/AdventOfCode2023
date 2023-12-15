@@ -328,7 +328,6 @@ int-bitest
 [ run-13-2 ] 400
 int-bitest
 
-[
 {
 "O....#...."
 "O.OO#....#"
@@ -341,10 +340,9 @@ int-bitest
 "#....###.."
 "#OO..#...."
 }
-run-14-1
-]
-136
-int-test
+[ run-14-1 ] 136
+[ run-14-2 ] 64
+int-bitest
 
 ! tests for real inputs, delete if using different ones
 

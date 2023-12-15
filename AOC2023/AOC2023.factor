@@ -8,8 +8,6 @@ FROM: multiline => /* ;
 FROM: sequences.extras =>
   first= second= last= 3map-reduce index* last-index* 2map-sum
   exchange-subseq ;
-FROM: match => ?rest ;
-FROM: math.combinatorics => nCk ;
 FROM: sets => intersect union ;
 IN: AOC2023
 

@@ -2,12 +2,9 @@ USING: accessors arrays assocs backtrack combinators
 compiler.utilities grouping hashtables io io.encodings.utf8
 io.files kernel math math.functions math.order math.parser
 math.vectors namespaces prettyprint quotations ranges regexp
-sequences sorting splitting strings unicode vectors ;
+sequences sequences.extras sorting splitting strings unicode
+vectors ;
 FROM: math.statistics => histogram ;
-FROM: multiline => /* ;
-FROM: sequences.extras =>
-  first= second= last= 3map-reduce index* last-index* 2map-sum
-  exchange-subseq ;
 FROM: sets => intersect union ;
 IN: AOC2023
 
@@ -260,23 +257,19 @@ C: <pos> pos
 ! split-indices and last-index are big time sinks in parts 1 and 2 respectively.
 ! The former might be better with slices, I'm not sure about the latter.
 
-/*
-Modular arithmetic:
-x = a mod b, x = c mod d => x = a + br = c + ds for some r,s >= 0.
-If ub + vd = 1, then x = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd, so z = vda + ubc mod bd.
-If ub + vd = z, where z = gcd(b,d), then zx = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd,
-so x = ( vda + ubc )/z mod lcm(b,d).
-*/
+! Modular arithmetic:
+! x = a mod b, x = c mod d => x = a + br = c + ds for some r,s >= 0.
+! If ub + vd = 1, then x = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd, so z = vda + ubc mod bd.
+! If ub + vd = z, where z = gcd(b,d), then zx = ubx + vdx = ub(c+ds) + vd(a+br) = vda + ubc + (us + rv)bd,
+! so x = ( vda + ubc )/z mod lcm(b,d).
 
-/*
-The documentation for gcd is wrong: a is actually the required multiplier for ax = d mod y, not ay = d mod x.
-Example code to show this:
-USE: backtrack
-: check-gcd ( x y -- ? ) 2dup gcd [ * ] dip - swap mod 0 = ;
-: check-gcd-opp-spec ( x y -- ? ) [ swap ] [ gcd ] 2bi [ * ] dip - swap mod 0 = ;
-[ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd not must-be-true 2array . t ] [ "All good." print ] if-amb drop
-[ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd-opp-spec not must-be-true 2array . t ] [ "All good." print ] if-amb drop
-*/
+! The documentation for gcd is wrong: a is actually the required multiplier for ax = d mod y, not ay = d mod x.
+! Example code to show this:
+! USE: backtrack
+! : check-gcd ( x y -- ? ) 2dup gcd [ * ] dip - swap mod 0 = ;
+! : check-gcd-opp-spec ( x y -- ? ) [ swap ] [ gcd ] 2bi [ * ] dip - swap mod 0 = ;
+! [ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd not must-be-true 2array . t ] [ "All good." print ] if-amb drop
+! [ 1 30 [a..b] amb 1 30 [a..b] amb 2dup check-gcd-opp-spec not must-be-true 2array . t ] [ "All good." print ] if-amb drop
 
 :: mults ( gcd mult1 x y -- mult2 ) gcd x mult1 * - y / ;
 :: crt-mod ( mod1 xs1 mod2 xs2 -- newmod xs )

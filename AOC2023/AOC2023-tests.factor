@@ -344,12 +344,10 @@ int-bitest
 [ run-14-2 ] 64
 int-bitest
 
-[
 "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7"
-run-15-1
-]
-1320
-int-test
+[ run-15-1 ] 1320
+[ run-15-2 ] 145
+int-bitest
 
 ! tests for real inputs, delete if using different ones
 
@@ -423,5 +421,5 @@ int-bitest
 
 15 read-input first
 [ run-15-1 ] 511498
-[ run-15-1 ] 511498
+[ run-15-2 ] 284674
 int-bitest

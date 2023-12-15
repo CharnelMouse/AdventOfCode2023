@@ -567,14 +567,16 @@ SYMBOL: cache-14
 
 ! Day 15
 
-: HASH ( string -- n ) 0 [ + 17 * 256 mod ] reduce ;
-: create-box ( box boxes -- val ) 0 <vector> [ -rot set-at ] keep ;
-: get-box ( label boxes -- box ) [ HASH ] dip at ;
-: get-or-create-box ( label boxes -- box ) [ HASH ] dip 2dup at dup [ 2nip ] [ drop create-box ] if ;
-: add-to-box ( lens label boxes -- ) dupd get-or-create-box set-at ;
-: remove-from-box ( label boxes -- ) dupd get-box dup [ delete-at ] [ 2drop ] if ;
 : parse-step ( string -- lens/f label op ) dup [ "=-" member? ] find [ [ 1 + tail string>number ] [ head ] 2bi ] dip ;
+: HASH ( string -- n ) 0 [ + 17 * 256 mod ] reduce ;
+
+: get-box ( label boxes -- box/f ) [ HASH ] dip at ;
+: create-box ( box boxes -- val ) 0 <vector> [ -rot set-at ] keep ;
+: get-or-create-box ( label boxes -- box ) [ HASH ] dip 2dup at [ 2nip ] [ create-box ] if* ;
+: add-to-box ( lens label boxes -- ) dupd get-or-create-box set-at ;
+: remove-from-box ( label boxes -- ) dupd get-box [ delete-at ] [ drop ] if* ;
 : HASHMAP-step ( boxes string -- boxes' ) parse-step CHAR: = = [ rot [ add-to-box ] keep ] [ nip swap [ remove-from-box ] keep ] if ;
+
 : HASHMAP ( strings -- assoc ) 0 <hashtable> [ HASHMAP-step ] reduce >alist ;
 : box-focus ( key-val -- n ) first2 [ 1 + ] dip [ length [1..b] ] [ [ second ] map ] bi v* sum * ;
 

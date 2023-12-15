@@ -8,9 +8,7 @@ Goals:
 To get this working in Factor, where [path] is the folder, write the following to set the AOC2023 folder as a Factor library:
 
 ```factor
-USE: tools.scaffold
 [path] set-current-directory
 [path] add-vocab-root
-[path] "AOC2023" scaffold-vocab-in
 USE: AOC2023
 ```

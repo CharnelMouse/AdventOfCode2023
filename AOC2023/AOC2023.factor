@@ -525,7 +525,7 @@ DEFER: 1solve-12-cached
 
 
 ! Day 14
-! half the time is spent
+! half the time is spent transposing matices ( "flip" );
 ! writing more direct versions of tilt-N/E/S instead of
 ! routing everything through tilt-W would probably speed things
 ! up a lot

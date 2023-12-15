@@ -568,7 +568,9 @@ SYMBOL: cache-14
 : get-or-create-box ( label boxes -- box ) [ HASH ] dip 2dup at [ 2nip ] [ create-box ] if* ;
 : add-to-box ( lens label boxes -- ) dupd get-or-create-box set-at ;
 : remove-from-box ( label boxes -- ) dupd get-box [ delete-at ] [ drop ] if* ;
-: HASHMAP-step ( boxes string -- boxes' ) parse-step CHAR: = = [ rot [ add-to-box ] keep ] [ nip swap [ remove-from-box ] keep ] if ;
+: add-step ( lens label boxes -- boxes' ) [ add-to-box ] keep ;
+: remove-step ( lens label boxes -- boxes' ) [ remove-from-box ] keep nip ;
+: HASHMAP-step ( boxes string -- boxes' ) parse-step [ rot ] dip CHAR: = = [ add-step ] [ remove-step ] if ;
 
 : HASHMAP ( strings -- assoc ) 0 <hashtable> [ HASHMAP-step ] reduce >alist ;
 : box-focus ( key-val -- n ) first2 [ 1 + ] dip [ length [1..b] ] [ seconds ] bi v* sum * ;

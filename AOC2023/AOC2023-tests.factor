@@ -349,6 +349,22 @@ int-bitest
 [ run-15-2 ] 145
 int-bitest
 
+{
+".|...\\...."
+"|.-.\\....."
+".....|-..."
+"........|."
+".........."
+".........\\"
+"..../.\\\\.."
+".-.-/..|.."
+".|....-|.\\"
+"..//.|...."
+}
+[ run-16-1 ] 46
+[ run-16-1 ] 46
+int-bitest
+
 ! tests for real inputs, delete if using different ones
 
 1 read-input
@@ -422,4 +438,9 @@ int-bitest
 15 read-input first
 [ run-15-1 ] 511498
 [ run-15-2 ] 284674
+int-bitest
+
+16 read-input
+[ run-16-1 ] 7951
+[ run-16-1 ] 7951
 int-bitest

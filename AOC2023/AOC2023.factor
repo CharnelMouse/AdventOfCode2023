@@ -1,10 +1,11 @@
-USING: accessors arrays assocs combinators compiler.utilities
-grouping hashtables io io.encodings.utf8 io.files kernel math
-math.functions math.order math.parser math.vectors namespaces
-prettyprint quotations ranges regexp sequences sequences.extras
-sorting splitting strings unicode vectors ;
+USING: accessors arrays assocs backtrack combinators
+compiler.utilities grouping hashtables io io.encodings.utf8
+io.files kernel math math.functions math.order math.parser
+math.vectors namespaces prettyprint quotations ranges regexp
+sequences sequences.extras sorting splitting strings unicode
+vectors ;
 FROM: math.statistics => histogram ;
-FROM: sets => intersect union ;
+FROM: sets => intersect union members ;
 IN: AOC2023
 
 ! Common words
@@ -578,3 +579,39 @@ SYMBOL: cache-14
 : run-15-1 ( string -- n ) "," split [ HASH ] map-sum ;
 : run-15-2 ( string -- n ) "," split HASHMAP [ box-focus ] map-sum ;
 : run-15 ( -- ) 15 read-input first [ run-15-1 . ] [ run-15-2 . ] bi ;
+
+
+! Day 16
+
+: dims ( strings -- dims ) [ first length ] [ length ] bi 2array ;
+: out-dims? ( dims pos -- ? ) [ infimum 0 < ] keep swapd [ <= ] 2any? or ;
+: oob? ( strings state -- ? ) [ dims ] dip first out-dims? ;
+: repeat? ( cache state -- ? ) swap member? ;
+: oob-or-repeat? ( cache strings state -- ? ) [ oob? ] keep swap [ repeat? ] dip or ;
+: cache-state ( cache strings state -- cache' strings state ) [ nip suffix ] 2keep ;
+: terrain ( strings pos -- char ) first2 rot nth nth ;
+DEFER: traverse-rec
+: go-straight ( cache strings state -- cache strings state ) first2 [ { { 0 [ { 0 1 } v- ] } { 1 [ { 1 0 } v+ ] } { 2 [ { 0 1 } v+ ] } { 3 [ { 1 0 } v- ] } } case ] keep 2array ;
+: h-split-right ( cache strings state -- cache strings state ) first2 drop 1 2array go-straight ;
+: h-split-left ( cache strings state -- cache strings state ) first2 drop 3 2array go-straight ;
+: v-split-up ( cache strings state -- cache strings state ) first2 drop 0 2array go-straight ;
+: v-split-down ( cache strings state -- cache strings state ) first2 drop 2 2array go-straight ;
+: h-split ( cache strings state -- cache strings state ) dup second odd? [ go-straight ] [ [ h-split-right traverse-rec 2drop ] 2keep h-split-left ] if ;
+: v-split ( cache strings state -- cache strings state ) dup second even? [ go-straight ] [ [ v-split-up traverse-rec 2drop ] 2keep v-split-down ] if ;
+: /-bounce ( cache strings state -- cache strings state ) first2 { { 0 [ 1 ] } { 1 [ 0 ] } { 2 [ 3 ] } { 3 [ 2 ] } } case 2array ;
+: \-bounce ( cache strings state -- cache strings state ) first2 { { 0 [ 3 ] } { 1 [ 2 ] } { 2 [ 1 ] } { 3 [ 0 ] } } case 2array ;
+: update-state-unbounded ( cache strings state terrain -- cache' strings state' )
+  {
+    { CHAR: . [ go-straight ] }
+    { CHAR: - [ h-split ] }
+    { CHAR: | [ v-split ] }
+    { CHAR: / [ /-bounce go-straight ] }
+    { CHAR: \ [ \-bounce go-straight ] }
+  } case traverse-rec ;
+: traverse-step ( cache strings state -- cache' strings state' ) cache-state 2dup first terrain update-state-unbounded ;
+: traverse-rec ( cache strings state -- cache strings state ) 3dup oob-or-repeat? [ traverse-step ] unless ;
+: traverse ( cache strings -- paths ) { { 0 0 } 1 } traverse-rec 2drop ;
+: count-traversed ( paths -- n ) [ first ] map members length ;
+: run-16-1 ( strings -- n ) [ 0 <vector> ] dip traverse count-traversed ;
+
+: show-traversal ( paths strings -- strings ) [ swap [ [ first first2 ] dip nth CHAR: # -rot set-nth ] keep ] reduce ;

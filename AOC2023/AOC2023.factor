@@ -582,6 +582,16 @@ SYMBOL: cache-14
 
 
 ! Day 16
+! Incredibly slow, because the cache isn't broken up very well.
+! Instead of a single path / list of visited states in the cache,
+! We should break it up into path segments, keyed by the original state.
+! A new segment starts whenever the path is split by a splitter.
+! Finding the path then means taking the starting segment, taking
+! its end state, and then appending the segment with that state as
+! the starter, if there is one.
+! This would dramatically speed up part 2, because this cache isn't
+! describing a single path, and so we can keep this cache between
+! different starting-point positions.
 
 : dims ( strings -- dims ) [ first length ] [ length ] bi 2array ;
 : out-dims? ( dims pos -- ? ) [ infimum 0 < ] keep swapd [ <= ] 2any? or ;

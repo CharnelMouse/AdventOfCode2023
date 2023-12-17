@@ -613,5 +613,15 @@ DEFER: traverse-rec
 : traverse ( cache strings -- paths ) { { 0 0 } 1 } traverse-rec 2drop ;
 : count-traversed ( paths -- n ) [ first ] map members length ;
 : run-16-1 ( strings -- n ) [ 0 <vector> ] dip traverse count-traversed ;
+: start-states-from-dims ( width height -- seq )
+  {
+    [ [ <iota> ] dip drop 0 [ 2array 2 2array ] curry map ]
+    [ [ <iota> ] dip 1 - [ 2array 0 2array ] curry map ]
+    [ [ drop 0 ] dip <iota> [ 2array 1 2array ] with map ]
+    [ [ 1 - ] dip <iota> [ 2array 3 2array ] with map ]
+  } 2cleave append append append ;
+: start-states ( strings -- seq ) dims first2 start-states-from-dims ;
+: run-16-2 ( strings -- n ) [ 0 <vector> ] swap [ [ rot traverse-rec 2drop count-traversed ] curry compose ] keep start-states swap map supremum ;
+: run-16 ( -- ) 16 read-input [ run-16-1 . ] [ run-16-2 . ] bi ;
 
 : show-traversal ( paths strings -- strings ) [ swap [ [ first first2 ] dip nth CHAR: # -rot set-nth ] keep ] reduce ;

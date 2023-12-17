@@ -362,7 +362,7 @@ int-bitest
 "..//.|...."
 }
 [ run-16-1 ] 46
-[ run-16-1 ] 46
+[ run-16-2 ] 51
 int-bitest
 
 ! tests for real inputs, delete if using different ones
@@ -443,4 +443,5 @@ int-bitest
 16 read-input
 [ run-16-1 ] 7951
 [ run-16-1 ] 7951
+! [ run-16-2 ] 6148
 int-bitest

@@ -639,6 +639,7 @@ DEFER: traverse-rec
 
 ! Day 17
 ! State is position, direction, straight tally (must turn after a 3-straight, can't make half-rotations)
+! Another slow-running day, not sure how to fix it yet
 
 : bottom-right ( strings -- pos ) [ first length 1 - ] [ length 1 - ] bi 2array ;
 : goals ( strings -- goal-states ) bottom-right 1array { 0 1 2 3 } { 0 1 2 } [ 2array ] cartesian-map concat [ append ] with map ; foldable

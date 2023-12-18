@@ -1,9 +1,9 @@
 USING: accessors arrays assocs backtrack combinators
 compiler.utilities grouping hashtables io io.encodings.utf8
 io.files kernel math math.functions math.order math.parser
-math.vectors namespaces prettyprint quotations ranges regexp
-sequences sequences.extras sorting splitting strings unicode
-vectors ;
+math.vectors namespaces path-finding prettyprint quotations
+ranges regexp sequences sequences.extras shuffle sorting
+splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: sets => intersect union members ;
 IN: AOC2023
@@ -635,3 +635,53 @@ DEFER: traverse-rec
 : run-16 ( -- ) 16 read-input [ run-16-1 . ] [ run-16-2 . ] bi ;
 
 : show-traversal ( paths strings -- strings ) [ swap [ [ first first2 ] dip nth CHAR: # -rot set-nth ] keep ] reduce ;
+
+
+! Day 17
+! State is position, direction, straight tally (must turn after a 3-straight, can't make half-rotations)
+
+: bottom-right ( strings -- pos ) [ first length 1 - ] [ length 1 - ] bi 2array ;
+: goals ( strings -- goal-states ) bottom-right 1array { 0 1 2 3 } { 0 1 2 } [ 2array ] cartesian-map concat [ append ] with map ; foldable
+: initial ( -- start-state ) { { 0 0 } 0 -1 } ; inline foldable
+
+: dir-vec ( dir -- pair ) { { 0 [ { 0 -1 } ] } { 1 [ { 1 0 } ] } { 2 [ { 0 1 } ] } { 3 [ { -1 0 } ] } } case ;
+: neighbours-unsafe ( state -- states )
+  {
+    [ first3 [ [ dir-vec v+ ] keep ] dip 1 + 3array ]
+    [ first3 drop 1 - 4 rem [ dir-vec v+ ] keep 0 3array ]
+    [ first3 drop 1 + 4 rem [ dir-vec v+ ] keep 0 3array ]
+  }
+  cleave [ dup third 3 < ] 2dip rot [ 3array ] [ 2array nip ] if ;
+: within-bounds? ( state nodes -- ? ) swap oob? not ;
+: neighs ( state nodes -- costinc-state-pairs ) [ neighbours-unsafe ] dip [ within-bounds? ] curry filter ;
+: to-neighbours ( nodes -- neighbours: ( state -- costinc-state-pairs ) ) [ neighs ] curry ;
+
+: travel-cost ( from to nodes -- cost ) [ first first2 ] dip nth nth 1string string>number nip ;
+: to-cost ( nodes -- cost: ( from to -- n ) ) [ travel-cost ] curry ;
+
+: heur ( state target min-cost -- cost ) [ [ first ] bi@ v- [ abs ] map-sum ] dip * ;
+: to-heuristic ( nodes -- heuristic: ( state target -- cost ) ) [ [ 1string string>number ] map ] map concat infimum [ heur ] curry ;
+
+! testing path-finding library
+! : initial-simple ( -- start-state ) { 0 0 } ; inline foldable
+! : to-neighbours-simple ( nodes -- neighbours: ( state -- costinc-state-pairs ) ) [ neighs ] curry ;
+! : to-heuristic-simple ( goal nodes -- heuristic: ( pos target -- cost ) ) [ [ 1string string>number ] map ] map concat infimum [ heur ] 2curry ;
+! : to-cost-simple ( nodes -- cost: ( from to -- n ) ) [ travel-cost ] curry ;
+! :: pathfind-simple ( nodes goals start -- paths )
+!   nodes to-neighbours-simple :> neighbours
+!   nodes to-cost-simple :> cost
+!   goals nodes to-heuristic-simple :> heuristic
+!   goals start neighbours cost heuristic <astar> [ swapd find-path ] 2curry map ;
+! :: run-17-1-simple ( strings -- n ) dup goals initial-simple pathfind-simple ;
+
+: to-goal? ( goals -- goal?: ( state -- ? ) ) [ member? ] curry ;
+: path-cost ( path-nodes node-costs -- n ) [ [ first2 ] dip nth nth ] curry map-sum ;
+:: pathfind-wobbly ( nodes goals start -- n )
+  nodes to-neighbours :> neighbours
+  nodes to-cost :> cost
+  nodes to-heuristic :> heuristic
+  goals start neighbours cost heuristic <astar> [ swapd find-path ] 2curry map sift :> paths
+  paths [ rest [ first ] map ] map :> path-nodes
+  nodes [ [ 1string string>number ] { } map-as ] map :> node-costs
+  path-nodes node-costs [ path-cost ] curry map infimum ;
+: run-17-1 ( strings -- n ) dup goals initial pathfind-wobbly ;

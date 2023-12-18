@@ -642,19 +642,24 @@ DEFER: traverse-rec
 
 : bottom-right ( strings -- pos ) [ first length 1 - ] [ length 1 - ] bi 2array ;
 : goals ( strings -- goal-states ) bottom-right 1array { 0 1 2 3 } { 0 1 2 } [ 2array ] cartesian-map concat [ append ] with map ; foldable
-: initial ( -- start-state ) { { 0 0 } 0 -1 } ; inline foldable
+: goals-big ( strings -- goal-states ) bottom-right 1array { 0 1 2 3 } { 3 4 5 6 7 8 9 } [ 2array ] cartesian-map concat [ append ] with map ; foldable
+: initial ( -- start-state ) { { 0 0 } -3 0 } ; inline foldable
 
 : dir-vec ( dir -- pair ) { { 0 [ { 0 -1 } ] } { 1 [ { 1 0 } ] } { 2 [ { 0 1 } ] } { 3 [ { -1 0 } ] } } case ;
-: neighbours-unsafe ( state -- states )
+: moves-unsafe ( state -- ahead left right )
   {
-    [ first3 [ [ dir-vec v+ ] keep ] dip 1 + 3array ]
+    [ first3 [ [ 4 rem dir-vec v+ ] keep ] dip over -3 = [ 2drop 1 0 ] [ [ 4 rem ] dip 1 + ] if 3array ]
     [ first3 drop 1 - 4 rem [ dir-vec v+ ] keep 0 3array ]
     [ first3 drop 1 + 4 rem [ dir-vec v+ ] keep 0 3array ]
   }
-  cleave [ dup third 3 < ] 2dip rot [ 3array ] [ 2array nip ] if ;
+  cleave ;
+: neighbours-unsafe ( state -- states ) moves-unsafe [ dup third 3 < ] 2dip rot [ 3array ] [ 2array nip ] if ;
+: neighbours-unsafe-big ( state -- states ) moves-unsafe [ dup third 10 < ] 2dip rot [ pick third 3 >  [ 2array swap prefix ] [ 2drop 1array ] if ] [ rot third 3 >= [ 2array ] [ 2drop { } ] if ] if ;
 : within-bounds? ( state nodes -- ? ) swap oob? not ;
 : neighs ( state nodes -- costinc-state-pairs ) [ neighbours-unsafe ] dip [ within-bounds? ] curry filter ;
 : to-neighbours ( nodes -- neighbours: ( state -- costinc-state-pairs ) ) [ neighs ] curry ;
+: neighs-big ( state nodes -- costinc-state-pairs ) [ neighbours-unsafe-big ] dip [ within-bounds? ] curry filter ;
+: to-neighbours-big ( nodes -- neighbours: ( state -- costinc-state-pairs ) ) [ neighs-big ] curry ;
 
 : travel-cost ( from to nodes -- cost ) [ first first2 ] dip nth nth 1string string>number nip ;
 : to-cost ( nodes -- cost: ( from to -- n ) ) [ travel-cost ] curry ;
@@ -684,4 +689,14 @@ DEFER: traverse-rec
   paths [ rest [ first ] map ] map :> path-nodes
   nodes [ [ 1string string>number ] { } map-as ] map :> node-costs
   path-nodes node-costs [ path-cost ] curry map infimum ;
+:: pathfind-bigwobbly ( nodes goals start -- paths )
+  nodes to-neighbours-big :> neighbours
+  nodes to-cost :> cost
+  nodes to-heuristic :> heuristic
+  goals start neighbours cost heuristic <astar> [ swapd find-path ] 2curry map sift :> paths
+  paths [ rest [ first ] map ] map :> path-nodes
+  path-nodes ;
+: min-path-cost ( path-nodes strings -- n ) [ [ 1string string>number ] { } map-as ] map [ path-cost ] curry map infimum ;
 : run-17-1 ( strings -- n ) dup goals initial pathfind-wobbly ;
+: run-17-2 ( strings -- n ) [ dup goals-big initial pathfind-bigwobbly ] keep min-path-cost ;
+: run-17 ( -- ) 17 read-input [ run-17-1 . ] [ run-17-2 . ] bi ;

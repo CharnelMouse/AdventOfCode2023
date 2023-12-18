@@ -381,7 +381,18 @@ int-bitest
 "4322674655533"
 }
 [ run-17-1 ] 102
-[ run-17-1 ] 102
+[ run-17-2 ] 94
+int-bitest
+
+{
+"111111111111"
+"999999999991"
+"999999999991"
+"999999999991"
+"999999999991"
+}
+[ run-17-2 ] 71
+[ run-17-2 ] 71
 int-bitest
 
 ! tests for real inputs, delete if using different ones
@@ -467,5 +478,5 @@ int-bitest
 
 ! 17 read-input
 ! [ run-17-1 ] 1099
-! [ run-17-1 ] 1099
+! [ run-17-2 ] 1266
 ! int-bitest

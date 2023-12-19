@@ -1,4 +1,4 @@
-USING: accessors arrays assocs backtrack combinators
+USING: accessors arrays assocs backtrack colors combinators
 compiler.utilities grouping hashtables io io.encodings.utf8
 io.files kernel math math.functions math.order math.parser
 math.vectors namespaces path-finding prettyprint quotations
@@ -701,3 +701,53 @@ DEFER: traverse-rec
 : run-17-1 ( strings -- n ) dup goals initial pathfind-wobbly ;
 : run-17-2 ( strings -- n ) [ dup goals-big initial pathfind-bigwobbly ] keep min-path-cost ;
 : run-17 ( -- ) 17 read-input [ run-17-1 . ] [ run-17-2 . ] bi ;
+
+
+! Day 18
+
+: parse-18 ( strings -- dir-n-col-seq ) [ split-words first3 [ first ] 2dip [ string>number ] dip [ "()" member? ] reject parse-color 3array ] map ;
+: dir-vec-alpha ( dir -- pair ) { { CHAR: U [ { 0 -1 } ] } { CHAR: R [ { 1 0 } ] } { CHAR: D [ { 0 1 } ] } { CHAR: L [ { -1 0 } ] } } case ;
+: carve ( pos dir n -- dir-nocoloursegment pos' ) [ [ dir-vec-alpha ] keep swap ] dip [0..b] [ dup 2array v* ] with map swapd [ v+ ] with map dup last [ 2array ] dip ;
+: apply-colour ( dir-nocoloursegment colour -- dir-segment ) drop ;
+: dig-line ( path-pos dir-n-col -- path'-pos' ) [ first2 ] dip first3 [ carve ] dip swap [ apply-colour suffix ] dip 2array ;
+: dig-trench ( dir-n-col-seq -- path-segments ) { { } { 0 0 } } [ dig-line ] reduce first ;
+: count-within-reducer ( pos-entering?-total pos' -- pos'-counting?'-total' )
+  2dup swap [ first - 1 = ] [ second ] bi 2array
+  {
+    { { t t } [ drop first3 [ 1 + ] 2dip 1 + 3array ] } ! entering edge
+    { { f t } [ [ first3 rot ] dip [ swap - + ] keep -rot [ drop f ] dip 3array ] } ! internal
+    { { t f } [ drop first3 [ 1 + ] 2dip 1 + 3array ] } ! exiting edge
+    { { f f } [ [ first3 rot ] dip [ 2drop 1 + ] keep -rot [ drop t ] dip 3array ] } ! external
+  } case ;
+: count-within ( edge-positions -- n ) unclip t 1 3array [ count-within-reducer ] reduce third ;
+: dirs-by-pos ( path -- hash ) [ first2 swap [ 2array ] curry map ] map concat [ first ] collect-by [ [ second ] map ] assoc-map ;
+: to-positive-pos ( hash -- hash' ) dup keys flip [ infimum ] map [ swap [ v- ] dip ] curry assoc-map ;
+: max-pos ( hash -- pos ) keys flip [ supremum ] map ;
+: blank-nodes ( pair -- nodes ) [ { } ] dip first2 swap [ CHAR: . <repetition> >string ] curry [ suffix ] compose times ;
+: swap-start-dir-order ( hash -- hash' ) { 0 0 } over [ at reverse swap [ { 0 0 } ] dip set-at ] keep ;
+: pipe-char ( dirs -- char )
+  >string
+  {
+    { "D" [ CHAR: | ] }
+    { "L" [ CHAR: - ] }
+    { "R" [ CHAR: - ] }
+    { "U" [ CHAR: | ] }
+    { "DD" [ CHAR: | ] }
+    { "DL" [ CHAR: J ] }
+    { "DR" [ CHAR: L ] }
+    { "LD" [ CHAR: F ] }
+    { "LL" [ CHAR: - ] }
+    { "LU" [ CHAR: L ] }
+    { "RD" [ CHAR: 7 ] }
+    { "RR" [ CHAR: - ] }
+    { "RU" [ CHAR: J ] }
+    { "UL" [ CHAR: 7 ] }
+    { "UR" [ CHAR: F ] }
+    { "UU" [ CHAR: | ] }
+  } case ;
+: add-pipe-to-nodes ( nodes pos-char -- nodes' ) first2 swap pick [ first2 ] dip nth set-nth ;
+: full-pipes ( pipe-info -- all-info ) dup max-pos first2 [ [0..b] ] bi@ [ 2array ] cartesian-map concat [ CHAR: . 2array ] map [ >alist ] dip [ first2 swap pick set-at ] reduce ;
+: trench-pipes ( path -- loop map ) dirs-by-pos swap-start-dir-order [ pipe-char ] assoc-map to-positive-pos [ keys ] [ full-pipes ] bi ;
+: run-18-1 ( strings -- n ) parse-18 dig-trench trench-pipes [ run-10-2 ] 2keep drop length + ;
+: to-pipe-map ( mp -- strings ) to-positive-pos dup max-pos { 1 1 } v+ blank-nodes [ add-pipe-to-nodes ] reduce ;
+: run-18 ( -- ) 18 read-input run-18-1 . ;

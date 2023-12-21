@@ -715,46 +715,8 @@ DEFER: traverse-rec
 : parse-18-2 ( strings -- dir-n-seq ) [ split-words third [ "(#)" member? ] reject col-to-instr ] map ;
 : dir-vec-alpha ( dir -- pair ) { { CHAR: U [ { 0 -1 } ] } { CHAR: R [ { 1 0 } ] } { CHAR: D [ { 0 1 } ] } { CHAR: L [ { -1 0 } ] } } case ;
 : carve ( pos dir n -- pos' ) [ dir-vec-alpha ] dip v*n v+ ;
-: push-segment ( hash dir poss -- hash' ) rot [ push-at-each ] keep ;
 : dig-line ( path-pos dir-n -- path'-pos' ) [ first2 ] dip first2 [ [ swap push ] 2keep ] 2dip carve 2array ;
 : dig-trench ( dir-n-seq -- pipe-corners ) V{ } clone { 0 0 } 2array [ dig-line ] reduce first2 swap [ push ] keep ;
-: count-within-reducer ( pos-entering?-total pos' -- pos'-counting?'-total' )
-  2dup swap [ first - 1 = ] [ second ] bi 2array
-  {
-    { { t t } [ drop first3 [ 1 + ] 2dip 1 + 3array ] } ! entering edge
-    { { f t } [ [ first3 rot ] dip [ swap - + ] keep -rot [ drop f ] dip 3array ] } ! internal
-    { { t f } [ drop first3 [ 1 + ] 2dip 1 + 3array ] } ! exiting edge
-    { { f f } [ [ first3 rot ] dip [ 2drop 1 + ] keep -rot [ drop t ] dip 3array ] } ! external
-  } case ;
-: count-within ( edge-positions -- n ) unclip t 1 3array [ count-within-reducer ] reduce third ;
-: dirs-by-pos ( path -- hash ) [ first2 swap [ 2array ] curry map ] map concat [ ] collect-assoc-by ;
-: to-positive-pos ( hash -- hash' ) dup keys flip [ infimum ] map [ swap [ v- ] dip ] curry assoc-map ;
-: max-pos ( hash -- pos ) keys flip [ supremum ] map ;
-: blank-nodes ( pair -- nodes ) [ { } ] dip first2 swap [ CHAR: . <repetition> >string ] curry [ suffix ] compose times ;
-: swap-start-dir-order ( hash -- hash' ) { 0 0 } over [ at reverse swap [ { 0 0 } ] dip set-at ] keep ;
-: pipe-char ( dirs -- char )
-  >string
-  {
-    { "D" [ CHAR: | ] }
-    { "L" [ CHAR: - ] }
-    { "R" [ CHAR: - ] }
-    { "U" [ CHAR: | ] }
-    { "DD" [ CHAR: | ] }
-    { "DL" [ CHAR: J ] }
-    { "DR" [ CHAR: L ] }
-    { "LD" [ CHAR: F ] }
-    { "LL" [ CHAR: - ] }
-    { "LU" [ CHAR: L ] }
-    { "RD" [ CHAR: 7 ] }
-    { "RR" [ CHAR: - ] }
-    { "RU" [ CHAR: J ] }
-    { "UL" [ CHAR: 7 ] }
-    { "UR" [ CHAR: F ] }
-    { "UU" [ CHAR: | ] }
-  } case ;
-: add-pipe-to-nodes ( nodes pos-char -- nodes' ) first2 swap pick [ first2 ] dip nth set-nth ;
-: full-pipes ( pipe-info -- all-info ) dup max-pos first2 [ [0..b] ] bi@ [ 2array ] cartesian-map concat [ CHAR: . 2array ] map [ >alist ] dip [ first2 swap pick set-at ] reduce ;
-: trench-pipes ( path-hash -- loop ) swap-start-dir-order >alist [ pipe-char ] assoc-map to-positive-pos ;
 : line-2area ( pos-pair -- n ) first2 reverse v* first2 - ;
 : line-2length ( pos-pair -- n ) first2 v- vabs sum ;
 : poly-area ( corners -- n ) 2 <clumps> [ [ line-2area ] [ line-2length ] bi + ] map-sum 2 / 1 + ;

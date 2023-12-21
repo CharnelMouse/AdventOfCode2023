@@ -1,8 +1,9 @@
-USING: accessors arrays assocs combinators compiler.utilities
-grouping hashtables io io.encodings.utf8 io.files kernel math
-math.functions math.order math.parser math.vectors namespaces
-path-finding prettyprint quotations ranges regexp sequences
-sequences.extras sorting splitting strings unicode vectors ;
+USING: accessors arrays assocs classes.tuple combinators
+compiler.utilities grouping hashtables io io.encodings.utf8
+io.files kernel math math.functions math.order math.parser
+math.vectors namespaces path-finding prettyprint quotations
+ranges regexp sequences sequences.extras slots sorting splitting
+strings unicode vectors words ;
 FROM: math.statistics => histogram ;
 FROM: sets => intersect union members ;
 IN: AOC2023
@@ -14,6 +15,7 @@ IN: AOC2023
 : as-seq ( x -- seq ) 1array ;
 : replace-nth ( new n seq -- seq' ) [ 1array ] 2dip [ dup 1 + ] dip replace-slice ;
 : split-words-multspace ( seq -- seq ) split-words harvest ;
+: split-paragraphs ( string -- strings ) { "" } split ;
 : cut-paragraph ( strings -- paragraph rest-strings ) { "" } split1 ;
 : parse-nums ( string -- ns ) split-words [ string>number ] map ;
 : firsts ( seqs -- seq ) [ first ] map ;
@@ -722,3 +724,19 @@ DEFER: traverse-rec
 : run-18-1 ( strings -- n ) parse-18 dig-trench poly-area ;
 : run-18-2 ( strings -- n ) parse-18-2 dig-trench poly-area ;
 : run-18 ( -- ) 18 read-input [ run-18-1 . ] [ run-18-2 . ] bi ;
+
+
+! Day 19
+
+TUPLE: part { x integer read-only } { m integer read-only } { a integer read-only } { s integer read-only } ;
+: <part> ( string -- part ) [ "{}xmas=" member? ] reject "," split [ string>number ] map first4 part boa ;
+: parse-slot-check ( string -- quot: ( string -- ? ) )
+  dup [ "<>" member? ] find [ [ head ">>" append "accessors" lookup-word 1quotation ] [  1 + tail string>number ] 2bi ] dip 1string "math" lookup-word 1quotation
+  curry compose ;
+: parse-result ( string -- quot: ( part -- key/? ) ) { { "A" [ [ drop t ] ] } { "R" [ [ drop f ] ] } [ 1quotation [ drop ] prepose ] } case ;
+: prev-cond ( false: ( part -- key/? ) string -- quot: ( part -- key/? ) ) ":" split1 parse-result -rot parse-slot-check -rot [ if ] curry curry compose [ dup ] prepose ;
+: >workflow-quot ( cond-chain -- quot: ( part -- key/? ) ) reverse unclip parse-result [ prev-cond ] reduce ;
+: parse-workflow ( string -- workflow: ( part -- string/? ) ) but-last "{,}" split unclip swap >workflow-quot 2array ;
+: validate ( part workflows -- ? ) "in" [ dup string? ] [ [ 2dup ] dip swap at call( part -- string/f ) ] while 2nip ;
+: part-rating ( part -- n ) tuple-slots sum ;
+: run-19-1 ( strings -- n ) split-paragraphs first2 [ [ parse-workflow ] map >hashtable ] dip [ <part> ] map swap [ validate ] curry filter [ part-rating ] map-sum ;

@@ -1,9 +1,8 @@
-USING: accessors arrays assocs assocs.extras backtrack colors
-combinators compiler.utilities grouping hashtables io
-io.encodings.utf8 io.files kernel math math.functions math.order
-math.parser math.vectors namespaces path-finding prettyprint
-quotations ranges regexp sequences sequences.extras shuffle
-sorting splitting strings unicode vectors ;
+USING: accessors arrays assocs combinators compiler.utilities
+grouping hashtables io io.encodings.utf8 io.files kernel math
+math.functions math.order math.parser math.vectors namespaces
+path-finding prettyprint quotations ranges regexp sequences
+sequences.extras sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: sets => intersect union members ;
 IN: AOC2023

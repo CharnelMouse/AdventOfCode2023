@@ -412,31 +412,8 @@ int-bitest
 "U 2 (#7a21e3)"
 }
 [ run-18-1 ] 62
-[ run-18-1 ] 62
+[ run-18-2 ] 952408144115
 int-bitest
-
-! >>>v.>>v
-! ^v<<.^.v
-! ^>>>>^.v
-! ^<<<<<<<
-[
-{
-"R 2 (#70c710)"
-"D 1 (#0dc571)"
-"L 2 (#5713f0)"
-"D 1 (#d2c081)"
-"R 4 (#59c680)"
-"U 2 (#411b91)"
-"R 2 (#8ceee2)"
-"D 3 (#caa173)"
-"L 7 (#1b58a2)"
-"U 3 (#caa171)"
-"R 1 (#7807d2)"
-}
-run-18-1
-]
-30
-int-test
 
 ! tests for real inputs, delete if using different ones
 
@@ -485,9 +462,9 @@ int-bitest
 [ run-09-2 ] 1211
 int-bitest
 
-10 read-input prepare-10 2dup
-[ run-10-1 ] 2curry 6640 int-test
-[ run-10-2 ] 2curry 411 int-test
+10 read-input prepare-10 dup
+[ run-10-1 ] curry 6640 int-test
+[ run-10-2 ] curry 411 int-test
 
 11 read-input process-11 2dup
 [ run-11-1 ] 2curry 9918828 int-test
@@ -523,3 +500,8 @@ int-bitest
 ! [ run-17-1 ] 1099
 ! [ run-17-2 ] 1266
 ! int-bitest
+
+18 read-input
+[ run-18-1 ] 61661
+[ run-18-2 ] 111131796939729
+int-bitest

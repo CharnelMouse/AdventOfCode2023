@@ -1,9 +1,9 @@
-USING: accessors arrays assocs backtrack colors combinators
-compiler.utilities grouping hashtables io io.encodings.utf8
-io.files kernel math math.functions math.order math.parser
-math.vectors namespaces path-finding prettyprint quotations
-ranges regexp sequences sequences.extras shuffle sorting
-splitting strings unicode vectors ;
+USING: accessors arrays assocs assocs.extras backtrack colors
+combinators compiler.utilities grouping hashtables io
+io.encodings.utf8 io.files kernel math math.functions math.order
+math.parser math.vectors namespaces path-finding prettyprint
+quotations ranges regexp sequences sequences.extras shuffle
+sorting splitting strings unicode vectors ;
 FROM: math.statistics => histogram ;
 FROM: sets => intersect union members ;
 IN: AOC2023
@@ -388,7 +388,7 @@ C: <pos> pos
 : find-start ( map -- pos )  [ keys ] [ values ] bi CHAR: S index* swap nth ;
 : find-start-connections ( start map -- dir-pos-val-s ) swap valid-neighbours ;
 : find-loop-from-pair ( start-connections start-pos map -- loop ) swapd [ 1vector ] 2dip [ over ] [ next-in-loop ] while 2drop ;
-: find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] curry curry map [ ] find nip ;
+: find-loop ( map -- loop ) [ find-start ] keep dupd [ find-start-connections ] keep swapd [ find-loop-from-pair ] 2curry map [ ] find nip ;
 
 : dirs-to-pipe ( dir1 dir2 -- char ) 2array sort {
     { { { -1 0 } { 0 -1 } } [ CHAR: J ] }
@@ -400,14 +400,16 @@ C: <pos> pos
   } case ;
 : get-start-pipe ( loop -- char ) [ [ second ] [ first ] bi v- ] [ [ last ] [ first ] bi v- ] bi dirs-to-pipe ;
 : fix-start-pipe ( loop map -- map' ) [ [ get-start-pipe ] [ first ] bi ] dip ?set-at ;
+: take-vals ( loop valued-map -- valued-loop valued-map ) [ [ dupd at 2array ] curry map ] keep ;
+: vals-to-loop ( loop valued-map -- valued-loop map ) take-vals keys ;
 
 : loop-bounds ( loop -- corners ) [ unclip [ vmin ] reduce ] [ unclip [ vmax ] reduce ] bi 2array ;
 
-: partition-pipes-by-row ( loop -- row-cols-pairs ) [ second ] partition-by [ firsts sort ] assoc-map ;
+: partition-pipes-by-row ( loop -- row-colvals-pairs ) [ first second ] partition-by [ [ [ first first ] [ second ] bi 2array ] map [ first ] sort-by ] assoc-map ;
 
-: row-partial-at ( row hash -- hash' ) [ drop second= ] with assoc-filter [ [ first ] dip ] assoc-map ;
+: row-partial-at ( row locs -- cols ) swap [ second= ] curry filter [ first ] map ;
 : to-range ( sorted-ns -- range ) [ first ] [ last ] bi [a..b] ;
-: nonloop-weights ( cols pipe-cols -- seq ) [ member? 0 1 ? ] curry map ;
+: nonloop-weights ( vals cols pipe-cols -- seq ) [ member? 0 1 ? ] curry map nip ;
 : char-halfval ( char -- n ) {
     { CHAR: | [ 2 ] }
     { CHAR: F [ 1 ] }
@@ -416,19 +418,22 @@ C: <pos> pos
     { CHAR: J [ -1 ] }
     [ drop 0 ]
   } case ;
-: halfturn ( col pipe-cols row-pipe-map -- ht ) [ dupd member? ] dip [ at char-halfval ] curry [ drop 0 ] if ;
-: halfturns ( cols pipe-cols row-pipe-map -- hts ) [ halfturn ] 2curry map ;
+: halfturn ( col vals pipe-cols -- ht ) swap [ swap [ = ] curry find ] dip [ nth char-halfval ] curry [ drop 0 ] if ;
+: halfturns ( vals cols pipe-cols -- hts ) swapd [ halfturn ] 2curry map ;
 : comb-hc ( hc1 hc2 -- newhc ) 2dup [ odd? ] both? [ - ] [ + ] if ;
 : accumulate-halfturns ( hts -- turn-weights ) 0 [ comb-hc ] accumulate* [ 2 / floor 2 rem ] map ;
-: count-internal ( row-cols pipe-map -- n )
-  [ [ second [ to-range ] keep ] [ first ] bi ] dip row-partial-at
-  [ halfturns accumulate-halfturns ] curry [ nonloop-weights ] 2bi
-  [ * ] [ + ] 2map-reduce ;
+:: reduce-halfturns ( col-ht-count val col -- col'-ht'-count' )
+  col-ht-count first3 :> ( oldcol ht count )
+  oldcol col =
+  [ col 1 +  ht val char-halfval comb-hc  count ]
+  [ col 1 +  ht val char-halfval comb-hc  col oldcol - ht 2 / floor 2 rem * count + ]
+  if 3array ;
+: count-internal ( row-colvals -- n ) second [ seconds ] [ firsts ] bi dup infimum { 0 0 } swap prefix [ reduce-halfturns ] 2reduce third ;
 
-: prepare-10 ( strings -- loop map ) parse-10 [ find-loop ] keep dupd fix-start-pipe ;
-: run-10-1 ( loop map -- n ) drop length 2 / ;
-: run-10-2 ( loop map -- n ) [ partition-pipes-by-row ] dip [ count-internal ] curry map-sum ;
-: run-10 ( -- ) 10 read-input prepare-10 [ run-10-1 . ] [ run-10-2 . ] 2bi ;
+: prepare-10 ( strings -- loop ) parse-10 [ find-loop ] keep dupd fix-start-pipe vals-to-loop drop ;
+: run-10-1 ( loop -- n ) length 2 / ;
+: run-10-2 ( loop -- n ) partition-pipes-by-row [ count-internal ] map-sum ;
+: run-10 ( -- ) 10 read-input prepare-10 [ run-10-1 . ] [ run-10-2 . ] bi ;
 
 
 ! Day 11
@@ -705,12 +710,14 @@ DEFER: traverse-rec
 
 ! Day 18
 
-: parse-18 ( strings -- dir-n-col-seq ) [ split-words first3 [ first ] 2dip [ string>number ] dip [ "()" member? ] reject parse-color 3array ] map ;
+: col-to-instr ( colstring -- dir-n ) unclip-last [ hex> ] dip { { CHAR: 0 [ CHAR: R ] } { CHAR: 1 [ CHAR: D ] } { CHAR: 2 [ CHAR: L ] } { CHAR: 3 [ CHAR: U ] } } case swap 2array ;
+: parse-18 ( strings -- dir-n-seq ) [ split-words first2 [ first ] dip string>number 2array ] map ;
+: parse-18-2 ( strings -- dir-n-seq ) [ split-words third [ "(#)" member? ] reject col-to-instr ] map ;
 : dir-vec-alpha ( dir -- pair ) { { CHAR: U [ { 0 -1 } ] } { CHAR: R [ { 1 0 } ] } { CHAR: D [ { 0 1 } ] } { CHAR: L [ { -1 0 } ] } } case ;
-: carve ( pos dir n -- dir-nocoloursegment pos' ) [ [ dir-vec-alpha ] keep swap ] dip [0..b] [ dup 2array v* ] with map swapd [ v+ ] with map dup last [ 2array ] dip ;
-: apply-colour ( dir-nocoloursegment colour -- dir-segment ) drop ;
-: dig-line ( path-pos dir-n-col -- path'-pos' ) [ first2 ] dip first3 [ carve ] dip swap [ apply-colour suffix ] dip 2array ;
-: dig-trench ( dir-n-col-seq -- path-segments ) { { } { 0 0 } } [ dig-line ] reduce first ;
+: carve ( pos dir n -- pos' ) [ dir-vec-alpha ] dip v*n v+ ;
+: push-segment ( hash dir poss -- hash' ) rot [ push-at-each ] keep ;
+: dig-line ( path-pos dir-n -- path'-pos' ) [ first2 ] dip first2 [ [ swap push ] 2keep ] 2dip carve 2array ;
+: dig-trench ( dir-n-seq -- pipe-corners ) V{ } clone { 0 0 } 2array [ dig-line ] reduce first2 swap [ push ] keep ;
 : count-within-reducer ( pos-entering?-total pos' -- pos'-counting?'-total' )
   2dup swap [ first - 1 = ] [ second ] bi 2array
   {
@@ -720,7 +727,7 @@ DEFER: traverse-rec
     { { f f } [ [ first3 rot ] dip [ 2drop 1 + ] keep -rot [ drop t ] dip 3array ] } ! external
   } case ;
 : count-within ( edge-positions -- n ) unclip t 1 3array [ count-within-reducer ] reduce third ;
-: dirs-by-pos ( path -- hash ) [ first2 swap [ 2array ] curry map ] map concat [ first ] collect-by [ [ second ] map ] assoc-map ;
+: dirs-by-pos ( path -- hash ) [ first2 swap [ 2array ] curry map ] map concat [ ] collect-assoc-by ;
 : to-positive-pos ( hash -- hash' ) dup keys flip [ infimum ] map [ swap [ v- ] dip ] curry assoc-map ;
 : max-pos ( hash -- pos ) keys flip [ supremum ] map ;
 : blank-nodes ( pair -- nodes ) [ { } ] dip first2 swap [ CHAR: . <repetition> >string ] curry [ suffix ] compose times ;
@@ -747,7 +754,10 @@ DEFER: traverse-rec
   } case ;
 : add-pipe-to-nodes ( nodes pos-char -- nodes' ) first2 swap pick [ first2 ] dip nth set-nth ;
 : full-pipes ( pipe-info -- all-info ) dup max-pos first2 [ [0..b] ] bi@ [ 2array ] cartesian-map concat [ CHAR: . 2array ] map [ >alist ] dip [ first2 swap pick set-at ] reduce ;
-: trench-pipes ( path -- loop map ) dirs-by-pos swap-start-dir-order [ pipe-char ] assoc-map to-positive-pos [ keys ] [ full-pipes ] bi ;
-: run-18-1 ( strings -- n ) parse-18 dig-trench trench-pipes [ run-10-2 ] 2keep drop length + ;
-: to-pipe-map ( mp -- strings ) to-positive-pos dup max-pos { 1 1 } v+ blank-nodes [ add-pipe-to-nodes ] reduce ;
-: run-18 ( -- ) 18 read-input run-18-1 . ;
+: trench-pipes ( path-hash -- loop ) swap-start-dir-order >alist [ pipe-char ] assoc-map to-positive-pos ;
+: line-2area ( pos-pair -- n ) first2 reverse v* first2 - ;
+: line-2length ( pos-pair -- n ) first2 v- vabs sum ;
+: poly-area ( corners -- n ) 2 <clumps> [ [ line-2area ] [ line-2length ] bi + ] map-sum 2 / 1 + ;
+: run-18-1 ( strings -- n ) parse-18 dig-trench poly-area ;
+: run-18-2 ( strings -- n ) parse-18-2 dig-trench poly-area ;
+: run-18 ( -- ) 18 read-input [ run-18-1 . ] [ run-18-2 . ] bi ;
